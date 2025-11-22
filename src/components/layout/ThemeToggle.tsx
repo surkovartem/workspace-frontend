@@ -32,7 +32,6 @@ export const ThemeToggle: React.FC = () => {
         normalizeMode(localStorage.getItem(STORAGE_KEY))
     );
 
-    // при первой загрузке
     useEffect(() => {
         if (!localStorage.getItem(STORAGE_KEY)) {
             setMode("auto");
@@ -41,7 +40,6 @@ export const ThemeToggle: React.FC = () => {
             applyTheme(mode);
         }
 
-        // слушаем изменение системной темы, если включен auto
         const mq = window.matchMedia("(prefers-color-scheme: light)");
         const handler = () => {
             const stored = normalizeMode(localStorage.getItem(STORAGE_KEY));
@@ -49,13 +47,14 @@ export const ThemeToggle: React.FC = () => {
                 applyTheme("auto");
             }
         };
+
         if (mq.addEventListener) {
             mq.addEventListener("change", handler);
         } else {
-            // старые браузеры
             // @ts-ignore
             mq.addListener(handler);
         }
+
         return () => {
             if (mq.removeEventListener) {
                 mq.removeEventListener("change", handler);
@@ -64,6 +63,7 @@ export const ThemeToggle: React.FC = () => {
                 mq.removeListener(handler);
             }
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {

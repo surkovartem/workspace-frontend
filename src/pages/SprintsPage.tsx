@@ -9,12 +9,10 @@ type SheetState =
 
 export const SprintsPage: React.FC = () => {
     const [sheetState, setSheetState] = useState<SheetState>({status: "loading"});
-    const [fileName, setFileName] = useState<string>("Файл не выбран");
-    const [isDragOver, setIsDragOver] = useState<boolean>(false);
-
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const [fileName, setFileName] = useState<string>("Файл не выбран");
+    const [dropOver, setDropOver] = useState(false);
 
-    // подгружаем список листов с backend
     useEffect(() => {
         fetch("/sprints/api/sheets")
             .then((resp) => {
@@ -35,11 +33,19 @@ export const SprintsPage: React.FC = () => {
             });
     }, []);
 
+    const handleFileChange = (file?: File) => {
+        if (file) {
+            setFileName(file.name);
+        } else {
+            setFileName("Файл не выбран");
+        }
+    };
+
     const renderSourceSheetField = () => {
         if (sheetState.status === "ok") {
             return (
                 <>
-                    <select name="sourceSheet" required defaultValue="">
+                    <select name="sourceSheet" required>
                         <option value="" disabled>
                             Выбери лист
                         </option>
@@ -57,7 +63,6 @@ export const SprintsPage: React.FC = () => {
             );
         }
 
-        // fallback: ручной ввод, как и раньше
         return (
             <>
                 <input
@@ -75,52 +80,8 @@ export const SprintsPage: React.FC = () => {
         );
     };
 
-    // === Dropzone / выбор файла ===
-
-    const handleDropzoneClick = () => {
-        fileInputRef.current?.click();
-    };
-
-    const handleFileChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (file) {
-            setFileName(file.name);
-        } else {
-            setFileName("Файл не выбран");
-        }
-    };
-
-    const handleDragOver: React.DragEventHandler<HTMLDivElement> = (e) => {
-        e.preventDefault();
-        setIsDragOver(true);
-    };
-
-    const handleDragLeave: React.DragEventHandler<HTMLDivElement> = (e) => {
-        e.preventDefault();
-        setIsDragOver(false);
-    };
-
-    const handleDrop: React.DragEventHandler<HTMLDivElement> = (e) => {
-        e.preventDefault();
-        setIsDragOver(false);
-
-        const files = e.dataTransfer.files;
-        if (files && files.length > 0) {
-            const file = files[0];
-
-            // проставляем файл в скрытый <input/>
-            if (fileInputRef.current) {
-                const dt = new DataTransfer();
-                dt.items.add(file);
-                fileInputRef.current.files = dt.files;
-            }
-
-            setFileName(file.name);
-        }
-    };
-
     return (
-        <div className="dark sprints-upload-page">
+        <div className="sprints-upload-page">
             <ThemeToggle/>
 
             <div className="wrap">
@@ -145,7 +106,6 @@ export const SprintsPage: React.FC = () => {
                 </p>
 
                 <section className="card upload-card">
-                    {/* ВНИМАНИЕ: action оставляем на Spring Boot, он как раньше сделает redirect на result.html */}
                     <form
                         method="post"
                         action="http://localhost:8080/sprints/ui/import"
@@ -164,7 +124,7 @@ export const SprintsPage: React.FC = () => {
                         <div className="row" style={{alignItems: "flex-start"}}>
                             <label>Файл CSV:</label>
                             <div style={{flex: 1, minWidth: 230}}>
-                                {/* скрытый input, управляем им из dropzone */}
+                                {/* скрытый input, дропзона работает поверх */}
                                 <input
                                     ref={fileInputRef}
                                     id="fileInput"
@@ -173,22 +133,37 @@ export const SprintsPage: React.FC = () => {
                                     accept=".csv"
                                     required
                                     style={{display: "none"}}
-                                    onChange={handleFileChange}
+                                    onChange={(e) => handleFileChange(e.target.files?.[0])}
                                 />
 
                                 <div
-                                    className={`dropzone ${isDragOver ? "drag-over" : ""}`}
+                                    className={"dropzone" + (dropOver ? " drag-over" : "")}
                                     id="dropzone"
-                                    onClick={handleDropzoneClick}
-                                    onDragOver={handleDragOver}
-                                    onDragLeave={handleDragLeave}
-                                    onDrop={handleDrop}
+                                    onClick={() => fileInputRef.current?.click()}
+                                    onDragOver={(e) => {
+                                        e.preventDefault();
+                                        setDropOver(true);
+                                    }}
+                                    onDragLeave={(e) => {
+                                        e.preventDefault();
+                                        setDropOver(false);
+                                    }}
+                                    onDrop={(e) => {
+                                        e.preventDefault();
+                                        setDropOver(false);
+                                        const files = e.dataTransfer.files;
+                                        if (files && files.length > 0) {
+                                            if (fileInputRef.current) {
+                                                fileInputRef.current.files = files;
+                                            }
+                                            handleFileChange(files[0]);
+                                        }
+                                    }}
                                 >
                                     <div className="dropzone-icon">
                                         <svg viewBox="0 0 24 24">
                                             <path
-                                                d="M12 3l4 4h-3v6h-2V7H8l4-4zm-6 9v7h12v-7h2v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-7h2z"
-                                            />
+                                                d="M12 3l4 4h-3v6h-2V7H8l4-4zm-6 9v7h12v-7h2v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-7h2z"/>
                                         </svg>
                                     </div>
                                     <div>
@@ -221,8 +196,7 @@ export const SprintsPage: React.FC = () => {
                         className="back-link"
                         style={{marginTop: "16px", display: "inline-flex", gap: 4}}
                     >
-                        <span>⟵</span>
-                        <span>К рабочему пространству</span>
+                        <span>⟵</span><span>К рабочему пространству</span>
                     </Link>
                 </section>
             </div>

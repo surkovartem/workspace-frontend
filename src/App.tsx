@@ -1,8 +1,8 @@
-// src/App.tsx
 import React from "react";
 import {Routes, Route} from "react-router-dom";
 import {HomePage} from "./pages/HomePage";
 import {SprintsPage} from "./pages/SprintsPage";
+import {TasksPage} from "./pages/TasksPage";
 
 const Stub: React.FC<{ title: string }> = ({title}) => (
     <div style={{padding: "40px 20px", color: "white"}}>
@@ -16,14 +16,11 @@ const App: React.FC = () => {
     return (
         <Routes>
             <Route path="/" element={<HomePage/>}/>
-
-            {/* Уже реальный экран */}
             <Route path="/sprints/upload" element={<SprintsPage/>}/>
-
-            {/* Остальное пока заглушки */}
+            <Route path="/tasks/react" element={<TasksPage/>}/>
             <Route path="/login" element={<Stub title="Login page"/>}/>
-            <Route path="/tasks" element={<Stub title="Таск-трекер"/>}/>
             <Route path="/kanban" element={<Stub title="Канбан-доска"/>}/>
+            <Route path="*" element={<HomePage/>}/>
         </Routes>
     );
 };

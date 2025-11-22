@@ -1,21 +1,10 @@
-// src/pages/HomePage.tsx
-import React, {useEffect} from "react";
+import React from "react";
 import {Link} from "react-router-dom";
 import {ThemeToggle} from "../components/layout/ThemeToggle";
 
 export const HomePage: React.FC = () => {
-    useEffect(() => {
-        const body = document.body;
-        body.classList.add("workspace-page");
-
-        return () => {
-            body.classList.remove("workspace-page");
-        };
-    }, []);
-
     return (
-        <>
-            {/* Переключатель темы — работает с body (light/dark) */}
+        <div className="workspace-page">
             <ThemeToggle/>
 
             <div className="wrap">
@@ -29,7 +18,7 @@ export const HomePage: React.FC = () => {
                 <p className="sub">Выбери, с чем хочешь работать сегодня.</p>
 
                 <div className="grid">
-                    {/* Импорт Спринтов */}
+                    {/* Импорт спринтов */}
                     <section className="card workspace-tool">
                         <svg className="tool-icon" viewBox="0 0 24 24" fill="var(--accent)">
                             <path d="M4 4h16v2H4zm0 6h16v2H4zm0 6h10v2H4z"/>
@@ -52,13 +41,13 @@ export const HomePage: React.FC = () => {
                         </svg>
                         <h2 className="tool-title">Таск-трекер</h2>
                         <p className="tool-sub">Единый список задач в табличном виде.</p>
-                        <Link className="tool-link" to="/tasks">
+                        <Link className="tool-link" to="/tasks/react">
                             <span>Перейти к трекеру</span>
                             <span className="arrow">⟶</span>
                         </Link>
                     </section>
 
-                    {/* Канбан */}
+                    {/* Канбан — пока заглушка */}
                     <section className="card workspace-tool">
                         <svg className="tool-icon" viewBox="0 0 24 24" fill="var(--accent)">
                             <path d="M4 4h6v16H4zm10 0h6v10h-6z"/>
@@ -71,7 +60,7 @@ export const HomePage: React.FC = () => {
                         </Link>
                     </section>
 
-                    {/* Остальные инструменты пока "в разработке" */}
+                    {/* Остальные инструменты — заглушки */}
                     <section className="card workspace-tool tool-disabled">
                         <svg className="tool-icon" viewBox="0 0 24 24" fill="var(--accent)">
                             <path d="M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 7v-7h7v7z"/>
@@ -111,6 +100,6 @@ export const HomePage: React.FC = () => {
                     </button>
                 </div>
             </div>
-        </>
+        </div>
     );
 };
