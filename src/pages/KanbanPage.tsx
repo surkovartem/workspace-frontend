@@ -2,55 +2,30 @@
 import React, {useEffect, useMemo, useState} from "react";
 import {Link} from "react-router-dom";
 import {ThemeToggle} from "../components/layout/ThemeToggle";
-import { useBodyPageClass } from "../hooks/useBodyPageClass";
+import type {Task, TaskPriority} from "../types/task";
+import {useBodyPageClass} from "../hooks/useBodyPageClass";
 
-type KanbanPriority = "P0" | "P1" | "P2" | "P3" | "P4";
+type LoadStatus = "loading" | "ok" | "error";
 
 interface KanbanColumn {
     id: number;
     code: string;
     title: string;
-}
-
-interface KanbanTask {
-    id: number;
-    title: string;
-    description: string | null;
-    priority: KanbanPriority;
-    dueDate: string | null;
-    completedAt: string | null;
-    columnId: number;
-}
-
-interface KanbanTaskDto {
-    id: number;
-    title: string;
-    description: string | null;
-    priority: KanbanPriority | null;
-    dueDate: string | null;
-    completedAt: string | null;
+    position: number;
 }
 
 interface BoardDto {
     columns: KanbanColumn[];
-    // JSON от Map<Long, List<Task>>
-    tasksByColumnId: Record<string, KanbanTaskDto[]>;
+    tasksByColumnId: Record<string, Task[]>;
 }
-
-type LoadState =
-    | { status: "loading" }
-    | { status: "ok"; columns: KanbanColumn[]; tasks: KanbanTask[] }
-    | { status: "error" };
-
-type DateFilter = "" | "overdue" | "today" | "tomorrow";
 
 interface TaskFormState {
     id?: number;
     columnId: number | null;
     title: string;
     description: string;
-    priority: KanbanPriority;
-    dueDate: string; // YYYY-MM-DD или ""
+    priority: TaskPriority;
+    dueDate: string; // "YYYY-MM-DD" либо ""
 }
 
 const defaultForm: TaskFormState = {
@@ -63,242 +38,337 @@ const defaultForm: TaskFormState = {
 
 export const KanbanPage: React.FC = () => {
     useBodyPageClass("kanban-page");
-    const [state, setState] = useState<LoadState>({status: "loading"});
 
-    const [priorityFilter, setPriorityFilter] = useState<KanbanPriority | "">(
-        ""
-    );
-    const [dateFilter, setDateFilter] = useState<DateFilter>("");
+    const [status, setStatus] = useState<LoadStatus>("loading");
+    const [board, setBoard] = useState<BoardDto | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
+    // «Тихая» синхронизация (без моргания страницы)
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    // Фильтры
+    const [priorityFilter, setPriorityFilter] = useState<string>("");
+    const [dateFilter, setDateFilter] = useState<string>("");
+
+    // DnD состояние
     const [dragTaskId, setDragTaskId] = useState<number | null>(null);
+    const [dragSourceColumnId, setDragSourceColumnId] = useState<number | null>(null);
 
+    const [hoverColumnId, setHoverColumnId] = useState<number | null>(null);
+    const [hoverCardId, setHoverCardId] = useState<number | null>(null);
+    const [hoverPosition, setHoverPosition] = useState<"above" | "below" | null>(null);
+
+    // Модалки
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [isEditOpen, setIsEditOpen] = useState(false);
-    const [createForm, setCreateForm] = useState<TaskFormState>({
-        ...defaultForm
-    });
-    const [editForm, setEditForm] = useState<TaskFormState>({
-        ...defaultForm
-    });
-    const [modalError, setModalError] = useState<string | null>(null);
 
-    // ------------ загрузка доски ------------
+    const [createForm, setCreateForm] = useState<TaskFormState>({...defaultForm});
+    const [editForm, setEditForm] = useState<TaskFormState>({...defaultForm});
 
-    const loadBoard = () => {
-        setState({status: "loading"});
+    // ---- загрузка доски ----
 
-        fetch("/kanban/api/board", {
-            credentials: "include"
-        })
-            .then((resp) => {
-                if (!resp.ok) {
-                    throw new Error("HTTP " + resp.status);
-                }
-                return resp.json();
-            })
-            .then((data: BoardDto) => {
-                const columns = data.columns ?? [];
+    const loadBoard = async (withSpinner: boolean) => {
+        if (withSpinner) {
+            setStatus((prev) => (prev === "ok" ? prev : "loading"));
+            setError(null);
+        }
 
-                const tasks: KanbanTask[] = [];
-                if (data.tasksByColumnId) {
-                    Object.entries(data.tasksByColumnId).forEach(
-                        ([columnIdStr, list]) => {
-                            const columnId = Number(columnIdStr);
-                            (list || []).forEach((t) => {
-                                tasks.push({
-                                    id: t.id,
-                                    title: t.title,
-                                    description: t.description ?? null,
-                                    priority: (t.priority as KanbanPriority) ?? "P2",
-                                    dueDate: t.dueDate ?? null,
-                                    completedAt: t.completedAt ?? null,
-                                    columnId
-                                });
-                            });
-                        }
-                    );
-                }
-
-                setState({status: "ok", columns, tasks});
-            })
-            .catch(() => {
-                setState({status: "error"});
+        try {
+            const resp = await fetch("/kanban/api/board", {
+                credentials: "include"
             });
+            if (!resp.ok) {
+                throw new Error("HTTP " + resp.status);
+            }
+            const data: BoardDto = await resp.json();
+            setBoard(data);
+            setStatus("ok");
+            setError(null);
+        } catch (e) {
+            console.error(e);
+            if (!board) {
+                setStatus("error");
+            }
+            setError("Не удалось загрузить доску.");
+        }
     };
 
     useEffect(() => {
-        loadBoard();
+        void loadBoard(true);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // ------------ drag & drop ------------
+    // ---- вычисление задач по колонкам с учётом фильтров ----
 
-    const handleCardDragStart = (taskId: number) => () => {
+    const columnsWithTasks = useMemo(() => {
+        if (!board) return [];
+
+        const now = new Date();
+
+        const parseDate = (str: string | null) => {
+            if (!str) return null;
+            const d = new Date(str);
+            return isNaN(d.getTime()) ? null : d;
+        };
+
+        return board.columns
+            .slice()
+            .sort((a, b) => a.position - b.position)
+            .map((col) => {
+                const key = String(col.id);
+                const tasks = (board.tasksByColumnId[key] ?? []).filter((t) => {
+                    // фильтр по приоритету
+                    if (priorityFilter && t.priority !== priorityFilter) {
+                        return false;
+                    }
+
+                    // фильтр по сроку
+                    if (!dateFilter) return true;
+
+                    const d = parseDate(t.dueDate);
+                    if (!d) return false;
+
+                    const taskDate = new Date(
+                        d.getFullYear(),
+                        d.getMonth(),
+                        d.getDate()
+                    );
+                    const today = new Date(
+                        now.getFullYear(),
+                        now.getMonth(),
+                        now.getDate()
+                    );
+                    const tomorrow = new Date(today);
+                    tomorrow.setDate(today.getDate() + 1);
+
+                    if (dateFilter === "overdue") {
+                        return taskDate < today;
+                    }
+                    if (dateFilter === "today") {
+                        return taskDate.getTime() === today.getTime();
+                    }
+                    if (dateFilter === "tomorrow") {
+                        return taskDate.getTime() === tomorrow.getTime();
+                    }
+                    return true;
+                });
+
+                return {column: col, tasks};
+            });
+    }, [board, priorityFilter, dateFilter]);
+
+    const isInitialLoading = status === "loading" && !board;
+
+    // ---- DnD ----
+
+    const resetHover = () => {
+        setHoverColumnId(null);
+        setHoverCardId(null);
+        setHoverPosition(null);
+    };
+
+    const handleCardDragStart = (taskId: number, columnId: number) => {
         setDragTaskId(taskId);
+        setDragSourceColumnId(columnId);
+        resetHover();
     };
 
     const handleCardDragEnd = () => {
         setDragTaskId(null);
+        setDragSourceColumnId(null);
+        resetHover();
     };
 
-    const handleCardDropOnCard =
-        (columnId: number, targetTaskId: number) =>
-            (e: React.DragEvent<HTMLDivElement>) => {
-                e.preventDefault();
-                if (dragTaskId == null) return;
-                if (state.status !== "ok") return;
-
-                const tasksInColumn = state.tasks.filter(
-                    (t) => t.columnId === columnId
-                );
-                const index = tasksInColumn.findIndex(
-                    (t) => t.id === targetTaskId
-                );
-                const targetIndex = index < 0 ? tasksInColumn.length : index;
-
-                sendMoveRequest(dragTaskId, columnId, targetIndex);
-            };
-
-    const handleColumnDrop =
-        (columnId: number) =>
-            (e: React.DragEvent<HTMLDivElement>) => {
-                e.preventDefault();
-                if (dragTaskId == null) return;
-                if (state.status !== "ok") return;
-
-                const tasksInColumn = state.tasks.filter(
-                    (t) => t.columnId === columnId
-                );
-                const targetIndex = tasksInColumn.length;
-
-                sendMoveRequest(dragTaskId, columnId, targetIndex);
-            };
-
-    const sendMoveRequest = (
-        taskId: number,
-        columnId: number,
-        index: number
+    const handleColumnDragOver = (
+        e: React.DragEvent<HTMLDivElement>,
+        columnId: number
     ) => {
-        fetch(
-            `/kanban/api/task/${encodeURIComponent(
-                taskId
-            )}/move?columnId=${encodeURIComponent(
-                columnId
-            )}&index=${encodeURIComponent(index)}`,
-            {
-                method: "POST",
-                credentials: "include"
-            }
-        )
-            .then((resp) => {
-                if (!resp.ok) {
-                    throw new Error("HTTP " + resp.status);
-                }
-                loadBoard();
-            })
-            .catch((err) => {
-                console.error("Move failed", err);
-            });
+        if (!dragTaskId) return;
+        e.preventDefault();
+        setHoverColumnId(columnId);
+        // если таска над пустой колонкой — card-hover не будет, но дроп сработает (в конец)
     };
 
-    // ------------ фильтры ------------
+    const handleCardDragOver = (
+        e: React.DragEvent<HTMLElement>,
+        columnId: number,
+        cardId: number
+    ) => {
+        if (!dragTaskId || dragTaskId === cardId) return;
+        e.preventDefault();
 
-    const filtered = useMemo(() => {
-        if (state.status !== "ok") return [];
-        const tasks = state.tasks;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const middleY = rect.top + rect.height / 2;
 
-        const today = new Date();
-        const todayOnly = new Date(
-            today.getFullYear(),
-            today.getMonth(),
-            today.getDate()
+        const position: "above" | "below" =
+            e.clientY < middleY ? "above" : "below";
+
+        setHoverColumnId(columnId);
+        setHoverCardId(cardId);
+        setHoverPosition(position);
+    };
+
+    const handleColumnDrop = async (
+        e: React.DragEvent<HTMLDivElement>,
+        targetColumnId: number
+    ) => {
+        e.preventDefault();
+
+        if (!board || dragTaskId == null || dragSourceColumnId == null) {
+            handleCardDragEnd();
+            return;
+        }
+
+        const sourceKey = String(dragSourceColumnId);
+        const targetKey = String(targetColumnId);
+
+        const originalSourceList = board.tasksByColumnId[sourceKey] ?? [];
+        const originalTargetList = board.tasksByColumnId[targetKey] ?? [];
+
+        const fromIndex = originalSourceList.findIndex(
+            (t) => t.id === dragTaskId
         );
-        const oneDayMs = 24 * 60 * 60 * 1000;
-        const tomorrowOnly = new Date(todayOnly.getTime() + oneDayMs);
+        if (fromIndex === -1) {
+            handleCardDragEnd();
+            return;
+        }
 
-        const parseDateOnly = (str: string | null) => {
-            if (!str) return null;
-            const parts = str.split("-");
-            if (parts.length !== 3) return null;
-            const [y, m, d] = parts.map(Number);
-            if (!y || !m || !d) return null;
-            return new Date(y, m - 1, d);
+        // вычисляем индекс вставки
+        let insertIndex = originalTargetList.length;
+
+        if (
+            hoverCardId != null &&
+            hoverColumnId === targetColumnId &&
+            originalTargetList.length > 0
+        ) {
+            const hoverIndexOriginal = originalTargetList.findIndex(
+                (t) => t.id === hoverCardId
+            );
+
+            if (hoverIndexOriginal !== -1) {
+                insertIndex =
+                    hoverPosition === "above"
+                        ? hoverIndexOriginal
+                        : hoverIndexOriginal + 1;
+            }
+        }
+
+        // если двигаем внутри одной колонки и тащим вниз, нужно скорректировать индекс
+        if (sourceKey === targetKey && insertIndex > fromIndex) {
+            insertIndex -= 1;
+        }
+
+        const finalIndexForBackend = insertIndex;
+
+        // локальное обновление доски для моментального эффекта
+        {
+            const newTasksByColumnId: Record<string, Task[]> = {
+                ...board.tasksByColumnId
+            };
+
+            const newSourceList = [...originalSourceList];
+            const [task] = newSourceList.splice(fromIndex, 1);
+
+            if (!task) {
+                handleCardDragEnd();
+                return;
+            }
+
+            if (sourceKey === targetKey) {
+                const newTargetList = newSourceList;
+                if (finalIndexForBackend < 0) {
+                    newTargetList.unshift(task);
+                } else if (finalIndexForBackend >= newTargetList.length) {
+                    newTargetList.push(task);
+                } else {
+                    newTargetList.splice(finalIndexForBackend, 0, task);
+                }
+                newTasksByColumnId[sourceKey] = newTargetList;
+            } else {
+                const newTargetList = [...originalTargetList];
+                if (finalIndexForBackend < 0) {
+                    newTargetList.unshift(task);
+                } else if (finalIndexForBackend >= newTargetList.length) {
+                    newTargetList.push(task);
+                } else {
+                    newTargetList.splice(finalIndexForBackend, 0, task);
+                }
+
+                newTasksByColumnId[sourceKey] = newSourceList;
+                newTasksByColumnId[targetKey] = newTargetList;
+            }
+
+            setBoard({
+                ...board,
+                tasksByColumnId: newTasksByColumnId
+            });
+        }
+
+        const quietReload = async () => {
+            try {
+                await fetch(
+                    `/kanban/api/task/${dragTaskId}/move?columnId=${targetColumnId}&index=${finalIndexForBackend}`,
+                    {
+                        method: "POST",
+                        credentials: "include"
+                    }
+                );
+                setIsSyncing(true);
+                await loadBoard(false);
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setIsSyncing(false);
+            }
         };
 
-        return tasks.filter((t) => {
-            if (priorityFilter && t.priority !== priorityFilter) {
-                return false;
-            }
+        void quietReload();
+        handleCardDragEnd();
+    };
 
-            if (!dateFilter) return true;
+    // ---- модалки ----
 
-            const d = parseDateOnly(t.dueDate);
-            if (!d) return false;
-
-            if (dateFilter === "overdue") {
-                return d < todayOnly;
-            }
-            if (dateFilter === "today") {
-                return d.getTime() === todayOnly.getTime();
-            }
-            if (dateFilter === "tomorrow") {
-                return d.getTime() === tomorrowOnly.getTime();
-            }
-            return true;
+    const openCreateModal = (columnId: number | null = null) => {
+        setCreateForm({
+            ...defaultForm,
+            columnId: columnId ?? (board?.columns[0]?.id ?? null)
         });
-    }, [state, priorityFilter, dateFilter]);
+        setIsCreateOpen(true);
+    };
 
-    const columns: KanbanColumn[] =
-        state.status === "ok" ? state.columns : [];
-
-    const tasksByColumn = (columnId: number): KanbanTask[] => {
-        if (state.status !== "ok") return [];
-        const base = filtered.length ? filtered : state.tasks;
-        return base.filter((t) => t.columnId === columnId);
+    const openEditModal = (task: Task, columnId: number) => {
+        setEditForm({
+            id: task.id,
+            columnId,
+            title: task.title,
+            description: task.description ?? "",
+            priority: task.priority,
+            dueDate: task.dueDate ?? ""
+        });
+        setIsEditOpen(true);
     };
 
     const closeAllModals = () => {
         setIsCreateOpen(false);
         setIsEditOpen(false);
-        setModalError(null);
     };
 
-    // ------------ открытие модалок ------------
+    // ---- CRUD через REST API ----
 
-    const openCreateForColumn = (columnId: number) => () => {
-        setCreateForm({
-            ...defaultForm,
-            columnId,
-            priority: "P2"
-        });
-        setModalError(null);
-        setIsCreateOpen(true);
+    const refreshQuietly = async () => {
+        setIsSyncing(true);
+        try {
+            await loadBoard(false);
+        } finally {
+            setIsSyncing(false);
+        }
     };
-
-    const openEditTask = (task: KanbanTask) => {
-        setEditForm({
-            id: task.id,
-            columnId: task.columnId,
-            title: task.title,
-            description: task.description ?? "",
-            priority: task.priority ?? "P2",
-            dueDate: task.dueDate ?? ""
-        });
-        setModalError(null);
-        setIsEditOpen(true);
-    };
-
-    // ------------ сохранение / удаление ------------
 
     const handleCreateSave = async () => {
-        if (!createForm.title.trim()) {
-            setModalError("Заголовок обязателен");
-            return;
-        }
         if (!createForm.columnId) {
-            setModalError("Не выбрана колонка");
+            alert("Не выбрана колонка");
             return;
         }
-
         const payload = {
             columnId: createForm.columnId,
             title: createForm.title.trim(),
@@ -316,38 +386,22 @@ export const KanbanPage: React.FC = () => {
                 credentials: "include",
                 body: JSON.stringify(payload)
             });
-
-            let json: any = null;
-            try {
-                json = await resp.json();
-            } catch {
-                // может не быть тела
-            }
-
             if (!resp.ok) {
-                const msg =
-                    json && json.error
-                        ? String(json.error)
-                        : "Не удалось создать задачу.";
-                setModalError(msg);
+                const text = await resp.text();
+                console.error("Create task failed", text);
+                alert("Не удалось создать задачу (" + resp.status + ")");
                 return;
             }
-
             closeAllModals();
-            loadBoard();
+            await refreshQuietly();
         } catch (e) {
             console.error(e);
-            setModalError("Ошибка сети при создании задачи.");
+            alert("Ошибка при создании задачи");
         }
     };
 
     const handleEditSave = async () => {
         if (!editForm.id) return;
-
-        if (!editForm.title.trim()) {
-            setModalError("Заголовок обязателен");
-            return;
-        }
 
         const payload = {
             title: editForm.title.trim(),
@@ -357,79 +411,51 @@ export const KanbanPage: React.FC = () => {
         };
 
         try {
-            const resp = await fetch(
-                `/kanban/api/task/${encodeURIComponent(editForm.id)}`,
-                {
-                    method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    credentials: "include",
-                    body: JSON.stringify(payload)
-                }
-            );
-
-            let json: any = null;
-            try {
-                json = await resp.json();
-            } catch {
-                // может не быть тела
-            }
-
+            const resp = await fetch(`/kanban/api/task/${editForm.id}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                credentials: "include",
+                body: JSON.stringify(payload)
+            });
             if (!resp.ok) {
-                const msg =
-                    json && json.error
-                        ? String(json.error)
-                        : "Не удалось сохранить задачу.";
-                setModalError(msg);
+                const text = await resp.text();
+                console.error("Update task failed", text);
+                alert("Не удалось сохранить задачу (" + resp.status + ")");
                 return;
             }
-
             closeAllModals();
-            loadBoard();
+            await refreshQuietly();
         } catch (e) {
             console.error(e);
-            setModalError("Ошибка сети при сохранении задачи.");
+            alert("Ошибка при сохранении задачи");
         }
     };
 
-    const handleDelete = async () => {
-        if (!editForm.id) return;
+    const handleDeleteTask = async (taskId: number) => {
+        const ok = window.confirm("Точно удалить задачу?");
+        if (!ok) return;
 
         try {
-            const resp = await fetch(
-                `/kanban/api/task/${encodeURIComponent(editForm.id)}`,
-                {
-                    method: "DELETE",
-                    credentials: "include"
-                }
-            );
-
+            const resp = await fetch(`/kanban/api/task/${taskId}`, {
+                method: "DELETE",
+                credentials: "include"
+            });
             if (!resp.ok) {
-                setModalError("Не удалось удалить задачу.");
+                const text = await resp.text();
+                console.error("Delete task failed", text);
+                alert("Не удалось удалить задачу (" + resp.status + ")");
                 return;
             }
-
-            closeAllModals();
-            loadBoard();
+            await refreshQuietly();
         } catch (e) {
             console.error(e);
-            setModalError("Ошибка сети при удалении задачи.");
+            alert("Ошибка при удалении задачи");
         }
     };
 
-    // ------------ рендер ------------
-
-    if (state.status === "loading") {
-        return (
-            <div className="kanban-page">
-                <ThemeToggle/>
-                <div className="wrap-wide">
-                    <p className="muted">Загружаю доску…</p>
-                </div>
-            </div>
-        );
-    }
+    // ---- рендер ----
 
     return (
         <div className="kanban-page">
@@ -442,15 +468,24 @@ export const KanbanPage: React.FC = () => {
                         <span className="brand-name">Workspace</span>
                         <span>• канбан-доска</span>
                     </div>
-                    <Link to="/" className="link">
-                        ⟵ К Workspace
-                    </Link>
+
+                    <div style={{display: "flex", alignItems: "center", gap: 12}}>
+                        {isSyncing && (
+                            <span className="muted" style={{fontSize: 12}}>
+                                Сохраняю изменения…
+                            </span>
+                        )}
+                        <Link to="/" className="link">
+                            <span>⟵</span>
+                            <span>К Workspace</span>
+                        </Link>
+                    </div>
                 </div>
 
                 <h1>Личная канбан-доска</h1>
                 <p className="sub">
-                    Простая доска для твоих задач. Дальше на этих данных можно
-                    строить матрицу Эйзенхауэра и аналитику.
+                    Простая доска для твоих задач. Дальше на этих данных можно строить матрицу
+                    Эйзенхауэра и аналитику.
                 </p>
 
                 {/* Тулбар фильтров */}
@@ -463,11 +498,7 @@ export const KanbanPage: React.FC = () => {
                             id="priorityFilter"
                             className="toolbar-select"
                             value={priorityFilter}
-                            onChange={(e) =>
-                                setPriorityFilter(
-                                    e.target.value as KanbanPriority | ""
-                                )
-                            }
+                            onChange={(e) => setPriorityFilter(e.target.value)}
                         >
                             <option value="">Все</option>
                             <option value="P0">🔥P0 — срочное реагирование</option>
@@ -486,9 +517,7 @@ export const KanbanPage: React.FC = () => {
                             id="dateFilter"
                             className="toolbar-select"
                             value={dateFilter}
-                            onChange={(e) =>
-                                setDateFilter(e.target.value as DateFilter)
-                            }
+                            onChange={(e) => setDateFilter(e.target.value)}
                         >
                             <option value="">Все</option>
                             <option value="overdue">Просрочено</option>
@@ -498,110 +527,160 @@ export const KanbanPage: React.FC = () => {
                     </div>
 
                     <div className="toolbar-spacer"/>
+
+                    <button
+                        type="button"
+                        className="btn-primary"
+                        style={{width: "auto", paddingInline: 16}}
+                        onClick={() => openCreateModal(null)}
+                    >
+                        + Новая задача
+                    </button>
                 </div>
 
-                {state.status === "error" && (
-                    <p className="error">Не удалось загрузить доску.</p>
+                {error && (
+                    <p className="error">{error}</p>
                 )}
 
-                {state.status === "ok" && (
+                {isInitialLoading && (
+                    <p className="muted" style={{marginTop: 16}}>
+                        Загружаю доску…
+                    </p>
+                )}
+
+                {!isInitialLoading && board && (
                     <div className="board">
-                        {columns.map((col) => (
-                            <div
-                                key={col.id}
-                                className={
-                                    "column " +
-                                    (col.code === "TODO"
-                                        ? "column-todo"
-                                        : col.code === "IN_PROGRESS"
-                                            ? "column-inprogress"
-                                            : col.code === "DONE"
-                                                ? "column-done"
-                                                : "")
-                                }
-                                onDragOver={(e) => e.preventDefault()}
-                                onDrop={handleColumnDrop(col.id)}
-                            >
-                                <div className="column-header">
-                                    <div className="column-title">{col.title}</div>
-                                </div>
+                        {columnsWithTasks.map(({column, tasks}) => {
+                            const colClasses = ["column"];
+                            if (column.code === "TODO") colClasses.push("column-todo");
+                            if (column.code === "IN_PROGRESS") colClasses.push("column-inprogress");
+                            if (column.code === "DONE") colClasses.push("column-done");
+                            if (hoverColumnId === column.id) colClasses.push("drag-over");
 
-                                <div className="column-tasks">
-                                    {tasksByColumn(col.id).map((t) => (
-                                        <article
-                                            key={t.id}
-                                            className="task-card"
-                                            draggable
-                                            onDragStart={handleCardDragStart(t.id)}
-                                            onDragEnd={handleCardDragEnd}
-                                            onDragOver={(e) => e.preventDefault()}
-                                            onDrop={handleCardDropOnCard(col.id, t.id)}
-                                            onClick={() => openEditTask(t)}
-                                        >
-                                            <div className="task-priority-row">
-                                                <span className="task-priority-chip">
-                                                    {t.priority === "P0" &&
-                                                        "🔥P0 — срочное реагирование"}
-                                                    {t.priority === "P1" &&
-                                                        "🔴P1 — важно и срочно"}
-                                                    {t.priority === "P2" &&
-                                                        "🟠P2 — важно, не срочно"}
-                                                    {t.priority === "P3" &&
-                                                        "🟡P3 — срочно, не важно"}
-                                                    {t.priority === "P4" &&
-                                                        "⚪P4 — не срочно, не важно"}
-                                                </span>
-                                            </div>
-
-                                            <div className="task-title">{t.title}</div>
-
-                                            {t.description && (
-                                                <div className="task-body">
-                                                    {t.description}
-                                                </div>
-                                            )}
-
-                                            <div className="task-meta">
-                                                <div className="task-meta-left">
-                                                    {t.dueDate && (
-                                                        <span className="task-chip task-due-chip">
-                                                            ⏱ <span>{t.dueDate}</span>
-                                                        </span>
-                                                    )}
-                                                    {t.completedAt && (
-                                                        <span className="task-chip">
-                                                            ✔{" "}
-                                                            <span>
-                                                                {t.completedAt}
-                                                            </span>
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </article>
-                                    ))}
-                                </div>
-
-                                {/* Кнопка добавления задачи в колонку */}
-                                <button
-                                    type="button"
-                                    className="btn-secondary column-add-btn"
-                                    onClick={openCreateForColumn(col.id)}
+                            return (
+                                <div
+                                    key={column.id}
+                                    className={colClasses.join(" ")}
+                                    data-column-id={column.id}
+                                    onDragOver={(e) => handleColumnDragOver(e, column.id)}
+                                    onDrop={(e) => handleColumnDrop(e, column.id)}
                                 >
-                                    + Добавить
-                                </button>
-                            </div>
-                        ))}
+                                    <div className="column-header">
+                                        <div className="column-title">
+                                            {column.title}
+                                        </div>
+                                    </div>
+
+                                    <div className="column-tasks">
+                                        {tasks.map((t) => {
+                                            const isDropTop =
+                                                hoverCardId === t.id &&
+                                                hoverColumnId === column.id &&
+                                                hoverPosition === "above";
+
+                                            const isDropBottom =
+                                                hoverCardId === t.id &&
+                                                hoverColumnId === column.id &&
+                                                hoverPosition === "below";
+
+                                            return (
+                                                <article
+                                                    key={t.id}
+                                                    className={
+                                                        "task-card" +
+                                                        (dragTaskId === t.id ? " dragging" : "") +
+                                                        (isDropTop ? " drop-target-top" : "") +
+                                                        (isDropBottom ? " drop-target-bottom" : "")
+                                                    }
+                                                    draggable
+                                                    onDragStart={() =>
+                                                        handleCardDragStart(t.id, column.id)
+                                                    }
+                                                    onDragEnd={handleCardDragEnd}
+                                                    onDragOver={(e) =>
+                                                        handleCardDragOver(e, column.id, t.id)
+                                                    }
+                                                    data-task-id={t.id}
+                                                    data-task-due-date={t.dueDate ?? ""}
+                                                    data-task-priority={t.priority}
+                                                    onClick={() => openEditModal(t, column.id)}
+                                                >
+                                                    {/* Верхняя строка: приоритет + крестик */}
+                                                    <div className="task-card-top">
+                                                        <div className="task-priority-row">
+                                                            <span className="task-priority-chip">
+                                                                {t.priority === "P0" &&
+                                                                    "🔥P0 — срочное реагирование"}
+                                                                {t.priority === "P1" &&
+                                                                    "🔴P1 — важно и срочно"}
+                                                                {t.priority === "P2" &&
+                                                                    "🟠P2 — важно, не срочно"}
+                                                                {t.priority === "P3" &&
+                                                                    "🟡P3 — срочно, не важно"}
+                                                                {t.priority === "P4" &&
+                                                                    "⚪P4 — не срочно, не важно"}
+                                                            </span>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            className="task-delete-button"
+                                                            title="Удалить"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                void handleDeleteTask(t.id);
+                                                            }}
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Заголовок */}
+                                                    <div className="task-title">{t.title}</div>
+
+                                                    {/* Описание */}
+                                                    {t.description && (
+                                                        <div className="task-body">
+                                                            {t.description}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Метаданные */}
+                                                    <div className="task-meta">
+                                                        <div className="task-meta-left">
+                                                            {t.dueDate && (
+                                                                <span className="task-chip task-due-chip">
+                                                                    ⏱ <span>{t.dueDate}</span>
+                                                                </span>
+                                                            )}
+                                                            {t.completedAt && (
+                                                                <span className="task-chip">
+                                                                    ✔ <span>{t.completedAt}</span>
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </article>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        className="btn-secondary column-add-btn"
+                                        onClick={() => openCreateModal(column.id)}
+                                    >
+                                        + Добавить
+                                    </button>
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
             </div>
 
-            {/* Модальное окно СОЗДАНИЯ задачи */}
+            {/* Модалка СОЗДАНИЯ */}
             {isCreateOpen && (
-                <div
-                    className="modal-backdrop"
-                    style={{display: "flex"}}
-                >
+                <div className="modal-backdrop" style={{display: "flex"}}>
                     <div className="modal">
                         <div className="modal-header">
                             <h2 className="modal-title">Новая задача</h2>
@@ -628,10 +707,9 @@ export const KanbanPage: React.FC = () => {
                                         }))
                                     }
                                 >
-                                    <option value="">Выбери колонку</option>
-                                    {columns.map((col) => (
-                                        <option key={col.id} value={col.id}>
-                                            {col.title}
+                                    {board?.columns.map((c) => (
+                                        <option key={c.id} value={c.id}>
+                                            {c.title}
                                         </option>
                                     ))}
                                 </select>
@@ -644,8 +722,7 @@ export const KanbanPage: React.FC = () => {
                                     onChange={(e) =>
                                         setCreateForm((prev) => ({
                                             ...prev,
-                                            priority:
-                                                e.target.value as KanbanPriority
+                                            priority: e.target.value as TaskPriority
                                         }))
                                     }
                                 >
@@ -711,10 +788,6 @@ export const KanbanPage: React.FC = () => {
                                 />
                             </label>
 
-                            {modalError && (
-                                <p className="error">{modalError}</p>
-                            )}
-
                             <div className="modal-footer">
                                 <button
                                     type="button"
@@ -736,17 +809,12 @@ export const KanbanPage: React.FC = () => {
                 </div>
             )}
 
-            {/* Модальное окно РЕДАКТИРОВАНИЯ задачи */}
+            {/* Модалка РЕДАКТИРОВАНИЯ */}
             {isEditOpen && (
-                <div
-                    className="modal-backdrop"
-                    style={{display: "flex"}}
-                >
+                <div className="modal-backdrop" style={{display: "flex"}}>
                     <div className="modal">
                         <div className="modal-header">
-                            <h2 className="modal-title">
-                                Редактировать задачу
-                            </h2>
+                            <h2 className="modal-title">Редактировать задачу</h2>
                             <button
                                 type="button"
                                 className="modal-close"
@@ -764,8 +832,7 @@ export const KanbanPage: React.FC = () => {
                                     onChange={(e) =>
                                         setEditForm((prev) => ({
                                             ...prev,
-                                            priority:
-                                                e.target.value as KanbanPriority
+                                            priority: e.target.value as TaskPriority
                                         }))
                                     }
                                 >
@@ -831,10 +898,6 @@ export const KanbanPage: React.FC = () => {
                                 />
                             </label>
 
-                            {modalError && (
-                                <p className="error">{modalError}</p>
-                            )}
-
                             <div className="modal-footer">
                                 <button
                                     type="button"
@@ -842,13 +905,6 @@ export const KanbanPage: React.FC = () => {
                                     onClick={closeAllModals}
                                 >
                                     Отмена
-                                </button>
-                                <button
-                                    type="button"
-                                    className="btn-secondary"
-                                    onClick={handleDelete}
-                                >
-                                    Удалить
                                 </button>
                                 <button
                                     type="button"
