@@ -34,8 +34,8 @@ export const LoginPage: React.FC = () => {
 
                     <div className="hero-meta">
                         <div className="pill"><strong>Sprints</strong>&nbsp;· CSV → Sheets</div>
-                        <div className="pill">Kanban · скоро</div>
-                        <div className="pill">Gantt · позже</div>
+                        <div className="pill">· Kanban</div>
+                        <div className="pill">· Task Manager</div>
                     </div>
                 </section>
 

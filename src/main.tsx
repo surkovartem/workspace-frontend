@@ -9,6 +9,7 @@ import "./styles/sprints.css";
 import "./styles/tasks_style.css";
 import "./styles/kanban_style.css";
 import "./styles/login.css";
+import "./styles/notfound.css";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
     <React.StrictMode>
