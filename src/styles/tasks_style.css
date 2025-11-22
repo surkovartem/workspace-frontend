@@ -398,3 +398,14 @@ body.tasks-page {
     justify-content: flex-end;
     gap: 8px;
 }
+
+/* Кнопка удаления в модалке */
+.btn-danger {
+    background: #dc2626;
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background: #b91c1c;
+}
+
