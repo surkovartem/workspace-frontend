@@ -7,6 +7,11 @@ import {useBodyPageClass} from "../hooks/useBodyPageClass";
 export const HomePage: React.FC = () => {
     useBodyPageClass("workspace-page");
 
+    const handleLogout = () => {
+        // Отдаём управление Spring Security: он сделает logout и редирект на /login?logout
+        window.location.href = "/logout";
+    };
+
     return (
         <div className="workspace-page">
             <ThemeToggle/>
@@ -98,7 +103,7 @@ export const HomePage: React.FC = () => {
                     <button
                         type="button"
                         className="logout-btn"
-                        onClick={() => alert("Потом привяжем logout к backend")}
+                        onClick={handleLogout}
                     >
                         Выйти
                     </button>

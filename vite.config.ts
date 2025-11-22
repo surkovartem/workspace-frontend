@@ -18,10 +18,12 @@ export default defineConfig({
                 target: "http://localhost:8080",
                 changeOrigin: true
             },
-            "/login": {
+            // ВЕСЬ backend-API (включая /api/login) ходит через /api
+            "/api": {
                 target: "http://localhost:8080",
                 changeOrigin: true
             },
+            // logout тоже на бэк
             "/logout": {
                 target: "http://localhost:8080",
                 changeOrigin: true

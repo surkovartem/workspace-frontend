@@ -233,13 +233,6 @@ export const SprintsPage: React.FC = () => {
                         <span className="brand-name">Workspace</span>
                         <span>• импорт спринтов</span>
                     </div>
-                    <button
-                        type="button"
-                        className="logout-btn"
-                        onClick={() => alert("Потом привяжем logout к backend")}
-                    >
-                        Выйти
-                    </button>
                 </div>
 
                 <h1>Загрузка Jira CSV</h1>
