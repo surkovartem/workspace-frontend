@@ -10,7 +10,11 @@ export default defineConfig({
                 target: "http://localhost:8080",
                 changeOrigin: true
             },
-            "/tasks/api": {
+            "/tasks": {
+                target: "http://localhost:8080",
+                changeOrigin: true
+            },
+            "/kanban": {
                 target: "http://localhost:8080",
                 changeOrigin: true
             },
