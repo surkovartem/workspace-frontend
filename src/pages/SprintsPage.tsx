@@ -7,20 +7,28 @@ type SheetState =
     | { status: "ok"; sheets: string[] }
     | { status: "error" };
 
+interface ImportResult {
+    filename: string;
+    originalSheet: string;
+    sheet: string;
+    parsed: number;
+    inserted: number;
+    updated: number;
+    changes: any;
+}
+
 export const SprintsPage: React.FC = () => {
     const [sheetState, setSheetState] = useState<SheetState>({status: "loading"});
+    const [importResult, setImportResult] = useState<ImportResult | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const [fileName, setFileName] = useState<string>("Файл не выбран");
-    const [dropOver, setDropOver] = useState(false);
+    const [isDragOver, setIsDragOver] = useState(false);
 
     useEffect(() => {
         fetch("/sprints/api/sheets")
-            .then((resp) => {
-                if (!resp.ok) {
-                    throw new Error("HTTP " + resp.status);
-                }
-                return resp.json();
-            })
+            .then((resp) => resp.ok ? resp.json() : [])
             .then((data: string[]) => {
                 if (Array.isArray(data) && data.length > 0) {
                     setSheetState({status: "ok", sheets: data});
@@ -28,17 +36,32 @@ export const SprintsPage: React.FC = () => {
                     setSheetState({status: "error"});
                 }
             })
-            .catch(() => {
-                setSheetState({status: "error"});
-            });
+            .catch(() => setSheetState({status: "error"}));
     }, []);
 
-    const handleFileChange = (file?: File) => {
-        if (file) {
-            setFileName(file.name);
-        } else {
-            setFileName("Файл не выбран");
-        }
+    const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        setImportResult(null);
+        setIsSubmitting(true);
+
+        const form = e.currentTarget;
+        const formData = new FormData(form);
+
+        fetch("/sprints/api/import", {
+            method: "POST",
+            body: formData
+        })
+            .then((resp) => {
+                if (!resp.ok) throw new Error("Import failed");
+                return resp.json();
+            })
+            .then((data: ImportResult) => {
+                setImportResult(data);
+            })
+            .catch(() => {
+                alert("Импорт завершился с ошибкой");
+            })
+            .finally(() => setIsSubmitting(false));
     };
 
     const renderSourceSheetField = () => {
@@ -80,6 +103,39 @@ export const SprintsPage: React.FC = () => {
         );
     };
 
+    const handleDropzoneClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const f = e.target.files && e.target.files[0];
+        setFileName(f ? f.name : "Файл не выбран");
+    };
+
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        setIsDragOver(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        setIsDragOver(false);
+    };
+
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        setIsDragOver(false);
+
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+            if (fileInputRef.current) {
+                // @ts-ignore — браузер позволяет, TS ругается, но по факту всё ок
+                fileInputRef.current.files = files;
+            }
+            setFileName(files[0].name);
+        }
+    };
+
     return (
         <div className="sprints-upload-page">
             <ThemeToggle/>
@@ -106,11 +162,7 @@ export const SprintsPage: React.FC = () => {
                 </p>
 
                 <section className="card upload-card">
-                    <form
-                        method="post"
-                        action="http://localhost:8080/sprints/ui/import"
-                        encType="multipart/form-data"
-                    >
+                    <form onSubmit={onSubmit} encType="multipart/form-data">
                         <div className="row">
                             <label>Исходный лист:</label>
                             <div style={{flex: 1, minWidth: 230}}>
@@ -124,7 +176,7 @@ export const SprintsPage: React.FC = () => {
                         <div className="row" style={{alignItems: "flex-start"}}>
                             <label>Файл CSV:</label>
                             <div style={{flex: 1, minWidth: 230}}>
-                                {/* скрытый input, дропзона работает поверх */}
+                                {/* Скрытый input для файла */}
                                 <input
                                     ref={fileInputRef}
                                     id="fileInput"
@@ -133,32 +185,17 @@ export const SprintsPage: React.FC = () => {
                                     accept=".csv"
                                     required
                                     style={{display: "none"}}
-                                    onChange={(e) => handleFileChange(e.target.files?.[0])}
+                                    onChange={handleFileChange}
                                 />
 
+                                {/* Красивый dropzone, как раньше */}
                                 <div
-                                    className={"dropzone" + (dropOver ? " drag-over" : "")}
+                                    className={`dropzone ${isDragOver ? "drag-over" : ""}`}
                                     id="dropzone"
-                                    onClick={() => fileInputRef.current?.click()}
-                                    onDragOver={(e) => {
-                                        e.preventDefault();
-                                        setDropOver(true);
-                                    }}
-                                    onDragLeave={(e) => {
-                                        e.preventDefault();
-                                        setDropOver(false);
-                                    }}
-                                    onDrop={(e) => {
-                                        e.preventDefault();
-                                        setDropOver(false);
-                                        const files = e.dataTransfer.files;
-                                        if (files && files.length > 0) {
-                                            if (fileInputRef.current) {
-                                                fileInputRef.current.files = files;
-                                            }
-                                            handleFileChange(files[0]);
-                                        }
-                                    }}
+                                    onClick={handleDropzoneClick}
+                                    onDragOver={handleDragOver}
+                                    onDragLeave={handleDragLeave}
+                                    onDrop={handleDrop}
                                 >
                                     <div className="dropzone-icon">
                                         <svg viewBox="0 0 24 24">
@@ -186,8 +223,8 @@ export const SprintsPage: React.FC = () => {
                             </div>
                         </div>
 
-                        <button className="btn-primary" type="submit">
-                            Импортировать
+                        <button className="btn-primary" type="submit" disabled={isSubmitting}>
+                            {isSubmitting ? "Импортирую…" : "Импортировать"}
                         </button>
                     </form>
 
@@ -199,6 +236,52 @@ export const SprintsPage: React.FC = () => {
                         <span>⟵</span><span>К рабочему пространству</span>
                     </Link>
                 </section>
+
+                {/* Блок результата импорта, уже на React */}
+                {importResult && (
+                    <div className="grid-result" style={{marginTop: 24}}>
+                        {/* Левая карточка: сводка */}
+                        <section className="card">
+                            <div className="pill-small">
+                                <span>Сводка</span>
+                            </div>
+
+                            <div className="result-summary-metrics">
+                                <div className="metric metric-parsed">
+                                    <div className="metric-value">{importResult.parsed}</div>
+                                    <div className="metric-label">Разобрано строк</div>
+                                </div>
+                                <div className="metric metric-inserted">
+                                    <div className="metric-value">{importResult.inserted}</div>
+                                    <div className="metric-label">Добавлено</div>
+                                </div>
+                                <div className="metric metric-updated">
+                                    <div className="metric-value">{importResult.updated}</div>
+                                    <div className="metric-label">Обновлено</div>
+                                </div>
+                            </div>
+
+                            <p className="sub" style={{marginTop: 16}}>
+                                Исходный лист <b>{importResult.originalSheet}</b> скопирован в{" "}
+                                <b>{importResult.sheet}</b>, файл{" "}
+                                <code>{importResult.filename}</code> импортирован в копию.
+                            </p>
+                        </section>
+
+                        {/* Правая карточка: изменения (пока просто JSON) */}
+                        <section className="card changes-section">
+                            <h2>Изменения</h2>
+                            {!importResult.changes && (
+                                <p className="muted">Изменений нет или сервис вернул пустой список.</p>
+                            )}
+                            {importResult.changes && (
+                                <pre style={{whiteSpace: "pre-wrap"}}>
+                                    {JSON.stringify(importResult.changes, null, 2)}
+                                </pre>
+                            )}
+                        </section>
+                    </div>
+                )}
             </div>
         </div>
     );

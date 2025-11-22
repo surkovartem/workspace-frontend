@@ -6,7 +6,7 @@ export default defineConfig({
     server: {
         port: 5173,
         proxy: {
-            "/sprints/api": {
+            "/sprints": {
                 target: "http://localhost:8080",
                 changeOrigin: true
             },
