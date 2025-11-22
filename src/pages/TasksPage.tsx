@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
-import type { FormEvent } from "react";
-import { Link } from "react-router-dom";
-import { ThemeToggle } from "../components/layout/ThemeToggle";
-import type { Task, TaskPriority, TaskStatus } from "../types/task";
+// src/pages/TasksPage.tsx
+import React, {useEffect, useMemo, useState} from "react";
+import {Link} from "react-router-dom";
+import {ThemeToggle} from "../components/layout/ThemeToggle";
+import type {Task, TaskPriority, TaskStatus} from "../types/task";
+import {useBodyPageClass} from "../hooks/useBodyPageClass";
 
 type LoadState =
     | { status: "loading" }
@@ -18,7 +19,7 @@ interface TaskFormState {
     description: string;
     priority: TaskPriority;
     status: TaskStatus;
-    dueDate: string; // "" либо "YYYY-MM-DD"
+    dueDate: string;
 }
 
 const defaultForm: TaskFormState = {
@@ -30,7 +31,9 @@ const defaultForm: TaskFormState = {
 };
 
 export const TasksPage: React.FC = () => {
-    const [state, setState] = useState<LoadState>({ status: "loading" });
+    useBodyPageClass("tasks-page");
+
+    const [state, setState] = useState<LoadState>({status: "loading"});
 
     const [statusFilter, setStatusFilter] = useState<string>("");
     const [priorityFilter, setPriorityFilter] = useState<string>("");
@@ -45,14 +48,12 @@ export const TasksPage: React.FC = () => {
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
-    const [createForm, setCreateForm] = useState<TaskFormState>({ ...defaultForm });
-    const [editForm, setEditForm] = useState<TaskFormState>({ ...defaultForm });
-
-    // ---------- загрузка задач ----------
+    const [createForm, setCreateForm] = useState<TaskFormState>({...defaultForm});
+    const [editForm, setEditForm] = useState<TaskFormState>({...defaultForm});
 
     const loadTasks = () => {
         setState((prev) =>
-            prev.status === "loading" ? prev : { status: "loading" }
+            prev.status === "loading" ? prev : {status: "loading"}
         );
 
         fetch("/tasks/api/list", {
@@ -74,18 +75,17 @@ export const TasksPage: React.FC = () => {
                     dueDate: t.dueDate ?? null,
                     completedAt: t.completedAt ?? null
                 }));
-                setState({ status: "ok", tasks });
+                setState({status: "ok", tasks});
             })
             .catch(() => {
-                setState({ status: "error" });
+                setState({status: "error"});
             });
     };
 
     useEffect(() => {
         loadTasks();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-
-    // ---------- фильтры + сортировка ----------
 
     const filteredAndSorted = useMemo(() => {
         if (state.status !== "ok") return [];
@@ -98,7 +98,7 @@ export const TasksPage: React.FC = () => {
 
         const getThisWeekBounds = () => {
             const today = new Date();
-            const day = today.getDay(); // 0 - вс, 1 - пн, ...
+            const day = today.getDay();
             const monday = new Date(today);
             const diff = day === 0 ? -6 : 1 - day;
             monday.setDate(today.getDate() + diff);
@@ -106,7 +106,7 @@ export const TasksPage: React.FC = () => {
             sunday.setDate(monday.getDate() + 6);
             monday.setHours(0, 0, 0, 0);
             sunday.setHours(23, 59, 59, 999);
-            return { monday, sunday };
+            return {monday, sunday};
         };
 
         const weekBounds =
@@ -194,10 +194,8 @@ export const TasksPage: React.FC = () => {
 
     const isLoading = state.status === "loading";
 
-    // ---------- helpers для форм ----------
-
     const openCreateModal = () => {
-        setCreateForm({ ...defaultForm });
+        setCreateForm({...defaultForm});
         setMenuTaskId(null);
         setIsCreateOpen(true);
     };
@@ -235,11 +233,7 @@ export const TasksPage: React.FC = () => {
         setMenuTaskId(null);
     };
 
-    // ---------- submit: create / edit / delete ----------
-
-    const handleCreateSubmit = async (e: FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-
+    const handleCreateSave = async () => {
         const payload = {
             title: createForm.title.trim(),
             description: createForm.description.trim() || null,
@@ -265,8 +259,7 @@ export const TasksPage: React.FC = () => {
         loadTasks();
     };
 
-    const handleEditSubmit = async (e: FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
+    const handleEditSave = async () => {
         if (!editForm.id) return;
 
         const payload = {
@@ -312,16 +305,14 @@ export const TasksPage: React.FC = () => {
         loadTasks();
     };
 
-    // ---------- UI ----------
-
     return (
         <div className="tasks-page">
-            <ThemeToggle />
+            <ThemeToggle/>
 
             <div className="wrap-wide">
                 <div className="head-line tasks-head-line">
                     <div className="brand-pill">
-                        <span className="brand-dot" />
+                        <span className="brand-dot"/>
                         <span className="brand-name">Workspace</span>
                         <span>• таск-трекер</span>
                     </div>
@@ -356,7 +347,6 @@ export const TasksPage: React.FC = () => {
                         </button>
                     </div>
 
-                    {/* Фильтры */}
                     <div className="tasks-toolbar">
                         <div className="tasks-filter-group">
                             <label
@@ -434,7 +424,7 @@ export const TasksPage: React.FC = () => {
                             </select>
                         </div>
 
-                        <div className="tasks-toolbar-spacer" />
+                        <div className="tasks-toolbar-spacer"/>
                     </div>
 
                     {state.status === "error" && (
@@ -480,7 +470,7 @@ export const TasksPage: React.FC = () => {
                                     Срок
                                 </th>
                                 <th className="col-date">Завершено</th>
-                                <th className="col-actions" />
+                                <th className="col-actions"/>
                             </tr>
                             </thead>
                             <tbody>
@@ -488,35 +478,35 @@ export const TasksPage: React.FC = () => {
                                 <tr className="task-row" key={t.id}>
                                     <td className="col-id">{t.id}</td>
                                     <td>
-                                        <span
-                                            className={
-                                                "status-badge " +
-                                                (t.status === "TODO"
-                                                    ? "status-badge-todo"
-                                                    : t.status ===
-                                                    "IN_PROGRESS"
-                                                        ? "status-badge-inprogress"
-                                                        : t.status === "DONE"
-                                                            ? "status-badge-done"
-                                                            : "")
-                                            }
-                                        >
-                                            {t.status}
-                                        </span>
+                                            <span
+                                                className={
+                                                    "status-badge " +
+                                                    (t.status === "TODO"
+                                                        ? "status-badge-todo"
+                                                        : t.status ===
+                                                        "IN_PROGRESS"
+                                                            ? "status-badge-inprogress"
+                                                            : t.status === "DONE"
+                                                                ? "status-badge-done"
+                                                                : "")
+                                                }
+                                            >
+                                                {t.status}
+                                            </span>
                                     </td>
                                     <td>
-                                        <span className="priority-pill">
-                                            {t.priority === "P0" &&
-                                                "🔥P0 — срочное реагирование"}
-                                            {t.priority === "P1" &&
-                                                "🔴P1 — важно и срочно"}
-                                            {t.priority === "P2" &&
-                                                "🟠P2 — важно, не срочно"}
-                                            {t.priority === "P3" &&
-                                                "🟡P3 — срочно, не важно"}
-                                            {t.priority === "P4" &&
-                                                "⚪P4 — не срочно, не важно"}
-                                        </span>
+                                            <span className="priority-pill">
+                                                {t.priority === "P0" &&
+                                                    "🔥P0 — срочное реагирование"}
+                                                {t.priority === "P1" &&
+                                                    "🔴P1 — важно и срочно"}
+                                                {t.priority === "P2" &&
+                                                    "🟠P2 — важно, не срочно"}
+                                                {t.priority === "P3" &&
+                                                    "🟡P3 — срочно, не важно"}
+                                                {t.priority === "P4" &&
+                                                    "⚪P4 — не срочно, не важно"}
+                                            </span>
                                     </td>
                                     <td className="col-title-text">
                                         {t.title}
@@ -529,20 +519,16 @@ export const TasksPage: React.FC = () => {
                                     <td className="task-row-actions">
                                         <div
                                             className="task-menu"
-                                            style={{ position: "relative" }}
+                                            style={{position: "relative"}}
                                         >
                                             <button
                                                 type="button"
                                                 className="task-menu-toggle"
                                                 aria-haspopup="true"
-                                                aria-expanded={
-                                                    menuTaskId === t.id
-                                                }
+                                                aria-expanded={menuTaskId === t.id}
                                                 onClick={() =>
                                                     setMenuTaskId((prev) =>
-                                                        prev === t.id
-                                                            ? null
-                                                            : t.id
+                                                        prev === t.id ? null : t.id
                                                     )
                                                 }
                                             >
@@ -634,7 +620,7 @@ export const TasksPage: React.FC = () => {
                 <div
                     className="modal-backdrop"
                     id="taskCreateModal"
-                    style={{ display: "flex" }}
+                    style={{display: "flex"}}
                 >
                     <div className="modal">
                         <div className="modal-header">
@@ -648,10 +634,7 @@ export const TasksPage: React.FC = () => {
                             </button>
                         </div>
 
-                        <form
-                            className="modal-form"
-                            onSubmit={handleCreateSubmit}
-                        >
+                        <div className="modal-form">
                             <label className="modal-label">
                                 Заголовок
                                 <input
@@ -689,8 +672,7 @@ export const TasksPage: React.FC = () => {
                                     onChange={(e) =>
                                         setCreateForm((prev) => ({
                                             ...prev,
-                                            priority:
-                                                e.target.value as TaskPriority
+                                            priority: e.target.value as TaskPriority
                                         }))
                                     }
                                 >
@@ -734,11 +716,15 @@ export const TasksPage: React.FC = () => {
                                 >
                                     Отмена
                                 </button>
-                                <button type="submit" className="btn-primary">
+                                <button
+                                    type="button"
+                                    className="btn-primary"
+                                    onClick={handleCreateSave}
+                                >
                                     Создать
                                 </button>
                             </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
             )}
@@ -748,7 +734,7 @@ export const TasksPage: React.FC = () => {
                 <div
                     className="modal-backdrop"
                     id="taskEditModal"
-                    style={{ display: "flex" }}
+                    style={{display: "flex"}}
                 >
                     <div className="modal">
                         <div className="modal-header">
@@ -764,10 +750,7 @@ export const TasksPage: React.FC = () => {
                             </button>
                         </div>
 
-                        <form
-                            className="modal-form"
-                            onSubmit={handleEditSubmit}
-                        >
+                        <div className="modal-form">
                             <label className="modal-label">
                                 Заголовок
                                 <input
@@ -805,8 +788,7 @@ export const TasksPage: React.FC = () => {
                                     onChange={(e) =>
                                         setEditForm((prev) => ({
                                             ...prev,
-                                            priority:
-                                                e.target.value as TaskPriority
+                                            priority: e.target.value as TaskPriority
                                         }))
                                     }
                                 >
@@ -835,8 +817,7 @@ export const TasksPage: React.FC = () => {
                                     onChange={(e) =>
                                         setEditForm((prev) => ({
                                             ...prev,
-                                            status:
-                                                e.target.value as TaskStatus
+                                            status: e.target.value as TaskStatus
                                         }))
                                     }
                                 >
@@ -870,11 +851,15 @@ export const TasksPage: React.FC = () => {
                                 >
                                     Отмена
                                 </button>
-                                <button type="submit" className="btn-primary">
+                                <button
+                                    type="button"
+                                    className="btn-primary"
+                                    onClick={handleEditSave}
+                                >
                                     Сохранить
                                 </button>
                             </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
             )}
@@ -883,7 +868,7 @@ export const TasksPage: React.FC = () => {
             {isDeleteOpen && (
                 <div
                     className="modal-backdrop"
-                    style={{ display: "flex" }}
+                    style={{display: "flex"}}
                 >
                     <div className="modal">
                         <div className="modal-header">

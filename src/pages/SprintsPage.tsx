@@ -1,7 +1,8 @@
 // src/pages/SprintsPage.tsx
-import React, { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import React, {useEffect, useMemo, useRef, useState, type FormEvent} from "react";
 import {ThemeToggle} from "../components/layout/ThemeToggle";
 import {Link} from "react-router-dom";
+import {useBodyPageClass} from "../hooks/useBodyPageClass";
 
 type SheetState =
     | { status: "loading" }
@@ -44,6 +45,8 @@ type ImportState =
 };
 
 export const SprintsPage: React.FC = () => {
+    useBodyPageClass("sprints-upload-page");
+
     const [sheetState, setSheetState] = useState<SheetState>({status: "loading"});
 
     const [selectedSheet, setSelectedSheet] = useState<string>("");
@@ -245,7 +248,6 @@ export const SprintsPage: React.FC = () => {
                 </p>
 
                 <section className="card upload-card">
-                    {/* Если импорт уже прошёл успешно — показываем экран результата */}
                     {importState.phase === "success" ? (
                         <div>
                             <div className="head-line" style={{marginBottom: 24}}>
@@ -295,7 +297,6 @@ export const SprintsPage: React.FC = () => {
                                             className="btn-primary"
                                             type="button"
                                             onClick={() => {
-                                                // сбрасываем состояние, чтобы снова показать форму
                                                 setImportState({phase: "idle"});
                                                 handleFileChange(null);
                                             }}
@@ -349,28 +350,30 @@ export const SprintsPage: React.FC = () => {
                                                     )}
                                                 </div>
 
-                                                {c.type === "UPDATE" && c.diffs && c.diffs.length > 0 && (
-                                                    <div style={{marginTop: 8}}>
-                                                        <table>
-                                                            <thead>
-                                                            <tr>
-                                                                <th>Поле</th>
-                                                                <th>Было</th>
-                                                                <th>Стало</th>
-                                                            </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                            {c.diffs.map((d, i2) => (
-                                                                <tr key={i2}>
-                                                                    <td>{d.field}</td>
-                                                                    <td>{d.oldVal}</td>
-                                                                    <td>{d.newVal}</td>
+                                                {c.type === "UPDATE" &&
+                                                    c.diffs &&
+                                                    c.diffs.length > 0 && (
+                                                        <div style={{marginTop: 8}}>
+                                                            <table>
+                                                                <thead>
+                                                                <tr>
+                                                                    <th>Поле</th>
+                                                                    <th>Было</th>
+                                                                    <th>Стало</th>
                                                                 </tr>
-                                                            ))}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                )}
+                                                                </thead>
+                                                                <tbody>
+                                                                {c.diffs.map((d, i2) => (
+                                                                    <tr key={i2}>
+                                                                        <td>{d.field}</td>
+                                                                        <td>{d.oldVal}</td>
+                                                                        <td>{d.newVal}</td>
+                                                                    </tr>
+                                                                ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    )}
 
                                                 {c.type === "DELETE_SOFT" && c.oldSnapshot && (
                                                     <div style={{marginTop: 8}}>
@@ -398,7 +401,8 @@ export const SprintsPage: React.FC = () => {
                                                                 <li>
                                                                     <b>Status</b>:{" "}
                                                                     <span>
-                                                                        {c.oldSnapshot["Status"] ?? ""}
+                                                                        {c.oldSnapshot["Status"] ??
+                                                                            ""}
                                                                     </span>
                                                                 </li>
                                                             </ul>
@@ -421,14 +425,14 @@ export const SprintsPage: React.FC = () => {
                                             Загружаю список листов…
                                         </div>
                                     )}
-                                    {sheetState.status !== "loading" && renderSourceSheetField()}
+                                    {sheetState.status !== "loading" &&
+                                        renderSourceSheetField()}
                                 </div>
                             </div>
 
                             <div className="row" style={{alignItems: "flex-start"}}>
                                 <label>Файл CSV:</label>
                                 <div style={{flex: 1, minWidth: 230}}>
-                                    {/* Скрытый native input – только для выбора файла */}
                                     <input
                                         id="fileInput"
                                         type="file"
@@ -439,7 +443,6 @@ export const SprintsPage: React.FC = () => {
                                         onChange={onNativeInputChange}
                                     />
 
-                                    {/* Красивый дропзон */}
                                     <div
                                         className={
                                             "dropzone" + (isDragOver ? " drag-over" : "")

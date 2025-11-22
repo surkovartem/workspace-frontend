@@ -1,8 +1,12 @@
+// src/pages/HomePage.tsx
 import React from "react";
 import {Link} from "react-router-dom";
 import {ThemeToggle} from "../components/layout/ThemeToggle";
+import {useBodyPageClass} from "../hooks/useBodyPageClass";
 
 export const HomePage: React.FC = () => {
+    useBodyPageClass("workspace-page");
+
     return (
         <div className="workspace-page">
             <ThemeToggle/>
@@ -47,7 +51,7 @@ export const HomePage: React.FC = () => {
                         </Link>
                     </section>
 
-                    {/* Канбан — пока заглушка */}
+                    {/* Канбан */}
                     <section className="card workspace-tool">
                         <svg className="tool-icon" viewBox="0 0 24 24" fill="var(--accent)">
                             <path d="M4 4h6v16H4zm10 0h6v10h-6z"/>
