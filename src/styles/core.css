@@ -1,0 +1,166 @@
+:root {
+    --radius-pill: 999px;
+    --radius-xl: 18px;
+    --shadow-soft-dark: 0 18px 60px rgba(15, 23, 42, 0.75);
+    --shadow-soft-light: 0 18px 50px rgba(0, 0, 0, 0.06);
+}
+
+/* Темы */
+
+body.light {
+    --bg: #f8fafc;
+    --bg-accent: #ffffff;
+    --card-bg: rgba(255, 255, 255, 0.9);
+    --stroke: rgba(15, 23, 42, 0.08);
+    --fg: #1f2937;
+    --fg-strong: #111827;
+    --muted: #6b7280;
+    --accent: #007bff;
+    --accent-soft: rgba(0, 123, 255, 0.15);
+    --danger: #dc2626;
+    --shadow-soft: var(--shadow-soft-light);
+}
+
+body.dark {
+    --bg: #050816;
+    --bg-accent: #0f172a;
+    --card-bg: rgba(15, 23, 42, 0.86);
+    --stroke: rgba(148, 163, 184, 0.35);
+    --fg: #e5e7eb;
+    --fg-strong: #f3f4f6;
+    --muted: #9ca3af;
+    --accent: #38bdf8;
+    --accent-soft: rgba(56, 189, 248, 0.12);
+    --danger: #f97373;
+    --shadow-soft: var(--shadow-soft-dark);
+}
+
+/* Базовые стили */
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, Inter, system-ui, "Segoe UI", Roboto, Arial;
+    background: radial-gradient(circle at top left, var(--bg-accent) 0, transparent 55%),
+    radial-gradient(circle at bottom right, var(--bg-accent) 0, var(--bg) 55%);
+    color: var(--fg);
+    transition: background 0.25s ease, color 0.25s ease;
+}
+
+/* Переключатель темы (общий для всех страниц) */
+
+.theme-toggle {
+    position: fixed;
+    top: 22px;
+    right: 22px;
+    z-index: 999;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--stroke);
+    background: var(--card-bg);
+    color: var(--fg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    transition: background .25s ease, transform .15s ease;
+    font-size: 18px;
+}
+
+.theme-toggle:hover {
+    transform: translateY(-2px);
+}
+
+/* Брендинг */
+
+.brand-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--stroke);
+    background: var(--card-bg);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.brand-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+.brand-name {
+    color: var(--fg-strong);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+/* Карточка и кнопка – общие компоненты */
+
+.card {
+    background: var(--card-bg);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--stroke);
+    box-shadow: var(--shadow-soft);
+    padding: 22px 22px 20px;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    transition: background 0.25s ease, border 0.25s ease;
+}
+
+.btn-primary {
+    margin-top: 4px;
+    width: 100%;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-soft));
+    border: none;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--fg-strong);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    text-decoration: none;
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+}
+
+/* Общие утилиты */
+
+.sub {
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.muted {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.logout-btn {
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--stroke);
+    background: transparent;
+    color: var(--muted);
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 12px;
+}

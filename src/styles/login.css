@@ -1,0 +1,112 @@
+/* Лэйаут страницы логина */
+
+body.login-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+}
+
+.shell {
+    width: min(960px, 100%);
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: 32px;
+    align-items: center;
+}
+
+@media (max-width: 768px) {
+    .shell {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+}
+
+.hero {
+    padding: 12px 4px;
+}
+
+.hero-title {
+    margin: 18px 0 10px;
+    font-size: clamp(28px, 4vw, 40px);
+    letter-spacing: -0.03em;
+    color: var(--fg-strong);
+}
+
+.hero-sub {
+    max-width: 360px;
+    font-size: 14px;
+    color: var(--muted);
+}
+
+.hero-meta {
+    margin-top: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 12px;
+}
+
+.pill {
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--stroke);
+    background: var(--card-bg);
+    color: var(--muted);
+}
+
+/* Форма логина */
+
+.card-title {
+    margin: 0 0 4px;
+    font-size: 18px;
+    color: var(--fg-strong);
+}
+
+.card-sub {
+    margin: 0 0 16px;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.field {
+    margin-bottom: 12px;
+}
+
+label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    display: block;
+}
+
+input[type=text],
+input[type=password] {
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid var(--stroke);
+    background: var(--bg-accent);
+    padding: 10px 12px;
+    font-size: 14px;
+    color: var(--fg);
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+input[type=text]:focus,
+input[type=password]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+}
+
+.status {
+    margin-top: 10px;
+    font-size: 12px;
+}
+
+.status.error {
+    color: var(--danger);
+}
+
+.status.info {
+    color: var(--muted);
+}

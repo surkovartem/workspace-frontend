@@ -1,0 +1,120 @@
+body.workspace-page {
+    padding: 40px 20px 80px;
+}
+
+.wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+}
+
+/* Заголовки */
+
+h1 {
+    margin: 22px 0 10px;
+    font-size: clamp(30px, 4vw, 42px);
+    letter-spacing: -0.04em;
+    color: var(--fg-strong);
+}
+
+.sub {
+    margin: 0 0 30px;
+    font-size: 16px;
+    color: var(--muted);
+}
+
+/* Сетка инструментов — КРУПНЕЕ */
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 22px;
+    margin-top: 20px;
+}
+
+/* Карточка инструмента — КРУПНАЯ */
+
+.card.workspace-tool {
+    padding: 26px 26px 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 180px;
+    transition: transform .2s ease;
+}
+
+.card.workspace-tool:hover {
+    transform: translateY(-3px);
+}
+
+/* Иконка */
+
+.tool-icon {
+    width: 36px;
+    height: 36px;
+    margin-bottom: 14px;
+    opacity: 0.95;
+}
+
+/* Тексты */
+
+.tool-title {
+    margin: 0 0 6px;
+    font-size: 18px;
+    color: var(--fg-strong);
+}
+
+.tool-sub {
+    margin: 0;
+    font-size: 14px;
+    color: var(--muted);
+}
+
+/* Ссылки и кнопки — акцент #007bff */
+
+.tool-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 16px;
+    font-size: 14px;
+    text-decoration: none;
+    color: #007bff; /* жесткий акцент для ссылок */
+}
+
+.tool-link span.arrow {
+    font-size: 15px;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: #fff;
+}
+
+.card.workspace-tool.tool-disabled {
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+/* Логаут */
+
+.footer {
+    margin-top: 36px;
+    display: flex;
+    justify-content: flex-end;
+    font-size: 12px;
+}
+
+.logout-btn {
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--stroke);
+    color: var(--muted);
+    padding: 8px 16px;
+    background: transparent;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.logout-btn:hover {
+    border-color: #007bff;
+    color: #007bff;
+}

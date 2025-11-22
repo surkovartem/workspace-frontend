@@ -1,0 +1,423 @@
+body.kanban-page {
+    padding: 40px 20px 80px;
+}
+
+.wrap-wide {
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.kanban-page .sub {
+    margin: 0 0 16px;
+    font-size: 14px;
+    color: var(--muted);
+}
+
+.error {
+    margin: 8px 0 0;
+    font-size: 13px;
+    color: var(--danger);
+}
+
+/* --------- ТУЛБАР --------- */
+.kanban-toolbar {
+    margin: 6px 0 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    align-items: flex-end;
+}
+
+.toolbar-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 150px;
+}
+
+.toolbar-label {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.toolbar-select {
+    font-size: 13px;
+    border-radius: 10px;
+    border: 1px solid var(--stroke);
+    background: var(--bg-accent);
+    color: var(--fg);
+    padding: 6px 8px;
+}
+
+.toolbar-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+    outline: none;
+}
+
+.toolbar-spacer {
+    flex: 1;
+}
+
+/* --------- ДОСКА --------- */
+
+.board {
+    margin-top: 4px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 18px;
+}
+
+/* Колонка */
+
+.column {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    border-radius: 20px;
+    border: 1px solid var(--stroke);
+    background: rgba(15, 23, 42, 0.02);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+}
+
+/* Лёгкая цветовая дифференциация колонок по смыслу */
+
+.column-todo {
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.06), rgba(15, 23, 42, 0.02));
+}
+
+.column-inprogress {
+    background: linear-gradient(180deg, rgba(245, 158, 11, 0.06), rgba(15, 23, 42, 0.02));
+}
+
+.column-done {
+    background: linear-gradient(180deg, rgba(34, 197, 94, 0.06), rgba(15, 23, 42, 0.02));
+}
+
+.column-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.column-title {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--fg-strong);
+}
+
+/* Кнопка добавления задачи в колонку */
+
+.column-add-btn {
+    margin-top: 8px;
+    width: 100%;
+    justify-content: center;
+    font-size: 13px;
+    border-radius: 999px;
+    border-style: dashed;
+    border-width: 1px;
+    border-color: var(--stroke);
+    background: transparent;
+    padding-block: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease, transform .1s ease;
+}
+
+.column-add-btn:hover {
+    background: rgba(0, 123, 255, 0.06);
+    border-color: #007bff;
+    color: var(--fg-strong);
+    transform: translateY(-1px);
+}
+
+/* Карточки задач */
+
+.column-tasks {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.task-card {
+    border-radius: 16px;
+    border: 1px solid var(--stroke);
+    background: rgba(15, 23, 42, 0.04);
+    padding: 12px 13px 10px;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+    transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease;
+}
+
+.task-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
+    background: rgba(15, 23, 42, 0.06);
+}
+
+.task-card.hidden {
+    display: none;
+}
+
+.task-card.dragging {
+    opacity: 0.6;
+    transform: scale(0.98);
+}
+
+.task-card.drop-target {
+    outline: 2px dashed rgba(0, 123, 255, 0.7);
+}
+
+/* Колонка как зона дропа */
+
+.column.drag-over {
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.35);
+    border-color: #007bff;
+}
+
+/* Заголовок задачи */
+
+.task-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--fg-strong);
+    letter-spacing: -0.01em;
+    margin-bottom: 4px;
+}
+
+/* Приоритет — отдельной строкой под заголовком */
+
+.task-priority-row {
+    margin-bottom: 6px;
+}
+
+.task-priority-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--stroke);
+    background: rgba(15, 23, 42, 0.03);
+    color: var(--muted);
+}
+
+/* Текст задачи */
+
+.task-body {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 8px;
+}
+
+/* Метаданные под задачей */
+
+.task-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.task-meta-left,
+.task-meta-right {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Общий вид «чипов» */
+
+.task-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--stroke);
+}
+
+/* Базовый вид чипа даты — читаемый в обеих темах */
+
+.task-due-chip {
+    background: var(--bg-accent);
+    color: var(--fg-strong);
+    border-color: var(--stroke);
+    transition: background-color .15s ease, border-color .15s ease;
+}
+
+/* Подсветка сроков — меняем только фон/бордер,
+   текст остаётся контрастным через var(--fg-strong) */
+
+.task-due-overdue {
+    background: rgba(239, 68, 68, 0.16);
+    border-color: rgba(239, 68, 68, 0.75);
+}
+
+.task-due-today {
+    background: rgba(245, 158, 11, 0.18);
+    border-color: rgba(245, 158, 11, 0.75);
+}
+
+.task-due-tomorrow {
+    background: rgba(59, 130, 246, 0.18);
+    border-color: rgba(59, 130, 246, 0.75);
+}
+
+/* В тёмной теме слегка подруливаем прозрачности,
+   чтобы не было «грязных» пятен */
+
+.dark .task-due-overdue {
+    background: rgba(239, 68, 68, 0.25);
+}
+
+.dark .task-due-today {
+    background: rgba(245, 158, 11, 0.26);
+}
+
+.dark .task-due-tomorrow {
+    background: rgba(59, 130, 246, 0.26);
+}
+
+/* Кнопка удаления */
+
+.task-delete-form {
+    margin: 0;
+}
+
+.task-delete-button {
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 2px 4px;
+}
+
+.task-delete-button:hover {
+    color: var(--danger);
+}
+
+/* --------- МОДАЛКИ --------- */
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 40;
+}
+
+.modal-backdrop.open {
+    display: flex;
+}
+
+.modal {
+    width: min(480px, 90vw);
+    border-radius: 22px;
+    border: 1px solid var(--stroke);
+    background: var(--bg);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+    padding: 18px 18px 16px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 16px;
+    color: var(--fg-strong);
+}
+
+.modal-close {
+    border: none;
+    background: transparent;
+    font-size: 16px;
+    cursor: pointer;
+    color: var(--muted);
+}
+
+.modal-close:hover {
+    color: var(--fg);
+}
+
+.modal-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.modal-label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.modal-label.inline {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.modal-label.inline input[type="date"] {
+    max-width: 160px;
+}
+
+.modal-label input[type="text"],
+.modal-label textarea,
+.modal-label select,
+.modal-label input[type="date"] {
+    font-size: 13px;
+    border-radius: 10px;
+    border: 1px solid var(--stroke);
+    background: var(--bg-accent);
+    color: var(--fg);
+    padding: 6px 8px;
+}
+
+.modal-label textarea {
+    resize: vertical;
+}
+
+.modal-label input:focus,
+.modal-label textarea:focus,
+.modal-label select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+    outline: none;
+}
+
+.modal-footer {
+    margin-top: 4px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+/* Ссылки наверх / общие */
+
+.link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: #007bff;
+    text-decoration: none;
+}
