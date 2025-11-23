@@ -1,110 +1,210 @@
 body.workspace-page {
-    padding: 40px 20px 80px;
+    padding: clamp(16px, 4vw, 40px) clamp(12px, 4vw, 20px) clamp(40px, 6vw, 80px);
 }
 
-.wrap {
+.workspace-page .wrap {
     max-width: 1080px;
     margin: 0 auto;
 }
 
-/* Заголовки */
+/* Заголовки на домашней странице */
 
-h1 {
+.workspace-page h1 {
     margin: 22px 0 10px;
     font-size: clamp(30px, 4vw, 42px);
     letter-spacing: -0.04em;
     color: var(--fg-strong);
 }
 
-.sub {
-    margin: 0 0 30px;
+.workspace-page .sub {
+    margin: 0 0 26px;
     font-size: 16px;
     color: var(--muted);
 }
 
-/* Сетка инструментов — КРУПНЕЕ */
+/* Два блока в ряд: "Планирование спринтов" и "Работа с заметками" */
 
-.grid {
+.workspace-sections-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 22px;
-    margin-top: 20px;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: 20px;
 }
 
-/* Карточка инструмента — КРУПНАЯ */
+/* Общий вид секции */
 
-.card.workspace-tool {
-    padding: 26px 26px 20px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    min-height: 180px;
-    transition: transform .2s ease;
+.workspace-section-block {
+    margin-top: 24px;
+    padding: 18px 20px 20px;
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--stroke);
+    background: var(--card-bg);
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+    position: relative;
+
+    /* по умолчанию используем общий акцент */
+    --section-accent: var(--accent);
 }
 
-.card.workspace-tool:hover {
-    transform: translateY(-3px);
+/* Лёгкий акцент по краю, но без цвета по всей площади */
+
+.workspace-section-block::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border-top: 3px solid var(--section-accent);
+    opacity: 0.6;
+    pointer-events: none;
 }
 
-/* Иконка */
-
-.tool-icon {
-    width: 36px;
-    height: 36px;
-    margin-bottom: 14px;
-    opacity: 0.95;
+/* Планирование спринтов — зелёный (Excel) */
+.workspace-section-block--sprints {
+    --section-accent: #217346; /* Excel green */
 }
 
-/* Тексты */
+/* Заметки — жёлтый */
+.workspace-section-block--notes {
+    --section-accent: #eab308;
+}
 
-.tool-title {
-    margin: 0 0 6px;
+/* Работа с задачами — синий (как общий accent) */
+.workspace-section-block--tasks {
+    --section-accent: var(--accent);
+}
+
+/* Построение отчётов — фиолетовый */
+.workspace-section-block--reports {
+    --section-accent: #a855f7;
+}
+
+/* Заголовок секции */
+
+.workspace-section-header {
+    margin-bottom: 12px;
+}
+
+.workspace-section-title {
+    margin: 0 0 4px;
     font-size: 18px;
     color: var(--fg-strong);
 }
 
-.tool-sub {
+.workspace-section-sub {
     margin: 0;
-    font-size: 14px;
+    font-size: 13px;
     color: var(--muted);
 }
 
-/* Ссылки и кнопки — акцент #007bff */
+/* Сетка инструментов внутри секций */
 
-.tool-link {
+.workspace-page .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 18px;
+    margin-top: 10px;
+    align-items: stretch; /* карточки растягиваются по высоте строки */
+}
+
+/* Карточка инструмента */
+
+.workspace-page .card.workspace-tool {
+    padding: 18px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 160px;
+    height: 100%; /* занять всю высоту ячейки grid */
+    background: var(--card-bg);
+    border-radius: 16px;
+    border: 1px solid rgba(148, 163, 184, 0.5);
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+    transition: transform .14s ease,
+    box-shadow .14s ease,
+    border-color .14s ease;
+}
+
+.workspace-page .card.workspace-tool:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
+    border-color: rgba(37, 99, 235, 0.55);
+}
+
+/* Иконка */
+
+.workspace-page .tool-icon {
+    width: 36px;
+    height: 36px;
+    margin-bottom: 14px;
+    opacity: 0.95;
+    fill: var(--section-accent);
+}
+
+/* Тексты карточек */
+
+.workspace-page .tool-title {
+    margin: 0 0 6px;
+    font-size: 17px;
+    color: var(--fg-strong);
+}
+
+/* Ограничиваем описание двумя строками,
+   чтобы высота карточек была ровной даже при длинном тексте */
+.workspace-page .tool-sub {
+    margin: 0;
+    font-size: 14px;
+    color: var(--muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* максимум 2 строки */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Ссылки и акценты */
+
+.workspace-page .tool-link {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     margin-top: 16px;
     font-size: 14px;
     text-decoration: none;
-    color: #007bff; /* жесткий акцент для ссылок */
+    color: var(--section-accent);
 }
 
-.tool-link span.arrow {
+.workspace-page .tool-link span.arrow {
     font-size: 15px;
 }
 
-.btn-primary {
-    background: #007bff;
-    color: #fff;
+/* Основная кнопка на домашней — не на всю ширину */
+
+.workspace-page .btn-primary {
+    width: auto;
+    padding-inline: 18px;
 }
 
-.card.workspace-tool.tool-disabled {
+/* Заглушки-инструменты */
+
+.workspace-page .card.workspace-tool.tool-disabled {
     opacity: 0.55;
     pointer-events: none;
 }
 
+/* Блок "Работа с задачами" и "Построение отчётов" ниже — просто такие же секции */
+
+.workspace-page .workspace-section-block + .workspace-section-block {
+    margin-top: 24px;
+}
+
 /* Логаут */
 
-.footer {
-    margin-top: 36px;
+.workspace-page .footer {
+    margin-top: 32px;
     display: flex;
     justify-content: flex-end;
     font-size: 12px;
 }
 
-.logout-btn {
+.workspace-page .logout-btn {
     border-radius: var(--radius-pill);
     border: 1px solid var(--stroke);
     color: var(--muted);
@@ -114,7 +214,38 @@ h1 {
     font-size: 13px;
 }
 
-.logout-btn:hover {
-    border-color: #007bff;
-    color: #007bff;
+.workspace-page .logout-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* Адаптация */
+
+@media (max-width: 880px) {
+    .workspace-sections-row {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+}
+
+@media (max-width: 640px) {
+    .workspace-section-block {
+        padding: 14px 14px 16px;
+        margin-top: 20px;
+    }
+
+    .workspace-page .grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+        margin-top: 8px;
+    }
+
+    .workspace-page .card.workspace-tool {
+        min-height: auto;
+        height: auto;
+    }
+
+    .workspace-page .sub {
+        margin-bottom: 20px;
+    }
 }

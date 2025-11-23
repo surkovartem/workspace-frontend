@@ -1,9 +1,11 @@
+/* Таск-трекер: отступы и контейнер */
+
 body.tasks-page {
-    padding: 40px 20px 80px;
+    padding: clamp(16px, 4vw, 40px) clamp(12px, 4vw, 20px) clamp(40px, 6vw, 80px);
 }
 
-.wrap-wide {
-    max-width: 1120px;
+.tasks-page .wrap-wide {
+    max-width: 1200px;
     margin: 0 auto;
 }
 
@@ -17,6 +19,18 @@ body.tasks-page {
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+/* Ссылка "к Workspace" и прочие линк-ссылки на странице */
+
+.tasks-page .back-link,
+.tasks-page .link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: var(--accent);
+    text-decoration: none;
 }
 
 /* Карточка с таблицей */
@@ -78,40 +92,64 @@ body.tasks-page {
     flex: 1;
 }
 
-/* Таблица шире и читаемее */
+/* Обёртка для горизонтального скролла таблицы */
+
+.tasks-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    margin-top: 6px;
+}
+
+/* Таблица */
 
 .tasks-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 6px;
     font-size: 13px;
+    min-width: 900px;
 }
+
+/* Заголовки */
+
+.tasks-table thead th {
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-size: 11px;
+}
+
+/* Базовые ячейки */
 
 .tasks-table th,
 .tasks-table td {
-    padding: 8px 10px;
+    padding: 12px 10px;
     border-bottom: 1px solid var(--stroke);
-    vertical-align: top;
+    vertical-align: middle;
+    text-align: left;
 }
 
 .tasks-table th {
     font-weight: 500;
     color: var(--muted);
-    background: rgba(15, 23, 42, 0.03);
+    background: var(--card-bg);
     user-select: none;
+    position: relative; /* для стрелки и ресайзера */
 }
 
 /* Сортируемые колонки: курсор + индикатор */
 
 .tasks-table th[data-sort-key] {
     cursor: pointer;
+    padding-right: 18px; /* запас под стрелку справа */
 }
 
 .tasks-table th[data-sort-key]::after {
     content: "↕";
     font-size: 10px;
-    margin-left: 4px;
     opacity: 0.4;
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
 }
 
 .tasks-table th[data-sort-key].sort-asc::after {
@@ -122,6 +160,31 @@ body.tasks-page {
 .tasks-table th[data-sort-key].sort-desc::after {
     content: "↓";
     opacity: 0.9;
+}
+
+/* РЕСАЙЗ КОЛОНОК — отдельный ресайзер-элемент, который добавляется JS */
+
+.tasks-col-resizer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    opacity: 0;
+    transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+
+.tasks-table th:hover .tasks-col-resizer {
+    opacity: 0.4;
+    background: var(--accent);
+    border-radius: 4px;
+}
+
+/* Последняя строка — без нижнего бордера */
+
+.tasks-table tbody tr:last-child td {
+    border-bottom: none;
 }
 
 /* Колонки */
@@ -155,10 +218,18 @@ body.tasks-page {
     text-align: right;
 }
 
-/* Строки */
+/* Строки: лёгкая зебра + плавный hover */
 
-.task-row:nth-child(even) {
-    background: rgba(15, 23, 42, 0.02);
+.tasks-table tbody tr {
+    transition: background-color 0.14s ease;
+}
+
+.tasks-table tbody tr:nth-child(even) {
+    background: rgba(15, 23, 42, 0.015);
+}
+
+.tasks-table tbody tr:hover {
+    background: var(--accent-soft);
 }
 
 .task-row.hidden {
@@ -251,50 +322,45 @@ body.tasks-page {
     color: var(--fg-strong);
 }
 
+/* Дропдаун меню */
+
 .task-menu-dropdown {
     position: absolute;
     right: 0;
-    top: 100%;
-    margin-top: 4px;
-    min-width: 140px;
-    border-radius: 12px;
-    border: 1px solid var(--stroke);
-    background: var(--bg-accent);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+    top: 120%;
+    background: var(--card-bg);
+    border-radius: 10px;
     padding: 4px 0;
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(-4px);
-    transition: opacity .12s ease, transform .12s ease;
-    z-index: 30;
-}
-
-.task-menu-dropdown.open {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateY(0);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+    z-index: 20;
+    min-width: 180px;
+    border: 1px solid var(--stroke);
 }
 
 .task-menu-item {
     width: 100%;
-    padding: 6px 12px;
     border: none;
     background: transparent;
+    text-align: left;
+    padding: 6px 12px;
+    cursor: pointer;
     font-size: 13px;
     color: var(--fg);
-    text-align: left;
-    cursor: pointer;
 }
 
 .task-menu-item:hover {
-    background: rgba(15, 23, 42, 0.06);
+    background: var(--accent-soft);
 }
 
 .task-menu-delete {
     color: var(--danger);
 }
 
-/* Модалки: переиспользуем паттерн из других страниц */
+.task-menu-delete:hover {
+    background: rgba(248, 113, 113, 0.08);
+}
+
+/* Модалки — общие (как на канбане) */
 
 .modal-backdrop {
     position: fixed;
@@ -399,13 +465,39 @@ body.tasks-page {
     gap: 8px;
 }
 
-/* Кнопка удаления в модалке */
-.btn-danger {
-    background: #dc2626;
-    color: #fff;
+/* Адаптив: планшеты/мобильные */
+
+@media (max-width: 768px) {
+    .tasks-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .tasks-add-btn {
+        align-self: stretch;
+    }
+
+    .tasks-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .tasks-toolbar-spacer {
+        display: none;
+    }
+
+    .tasks-filter-group {
+        width: 100%;
+    }
 }
 
-.btn-danger:hover {
-    background: #b91c1c;
-}
+@media (max-width: 480px) {
+    .tasks-card {
+        padding-inline: 14px;
+    }
 
+    .tasks-table-wrap {
+        margin-top: 4px;
+    }
+}
