@@ -67,16 +67,18 @@ export const HomePage: React.FC = () => {
                         </div>
 
                         <div className="grid">
-                            {/* Заглушка под будущий модуль заметок */}
-                            <section className="card workspace-tool tool-disabled">
+                            <section className="card workspace-tool">
                                 <svg className="tool-icon" viewBox="0 0 24 24">
                                     <path d="M5 4h14v2H5zm0 4h10v2H5zm0 4h14v2H5zm0 4h10v2H5z"/>
                                 </svg>
+
                                 <h3 className="tool-title">Заметки</h3>
-                                <p className="tool-sub">
-                                    Быстрые записи, идеи и рабочие конспекты.
-                                </p>
-                                <span className="tool-link">В разработке</span>
+                                <p className="tool-sub">Быстрые записи и визуальные мысли.</p>
+
+                                <Link className="tool-link" to="/notes">
+                                    <span>Открыть заметки</span>
+                                    <span className="arrow">⟶</span>
+                                </Link>
                             </section>
                         </div>
                     </section>
