@@ -6,7 +6,8 @@ import {SprintsPage} from "./pages/SprintsPage";
 import {TasksPage} from "./pages/TasksPage";
 import {KanbanPage} from "./pages/KanbanPage";
 import {LoginPage} from "./pages/LoginPage";
-import {NotFoundPage} from "./pages/NotFoundPage"; // <-- добавить
+import {NotFoundPage} from "./pages/NotFoundPage";
+import {NotesPage} from "./pages/NotesPage.tsx"; // <-- добавить
 
 const Stub: React.FC<{ title: string }> = ({title}) => (
     <div style={{padding: "40px 20px", color: "white"}}>
@@ -26,6 +27,8 @@ const App: React.FC = () => {
             <Route path="/tasks" element={<Stub title="Старый таск-трекер (UI из Spring)"/>}/>
             <Route path="/kanban" element={<KanbanPage/>}/>
             <Route path="*" element={<NotFoundPage/>}/>
+            <Route path="/notes" element={<NotesPage/>}/>
+            <Route path="/notes/*" element={<NotesPage/>}/>
         </Routes>
     );
 };
