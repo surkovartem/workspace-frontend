@@ -3,6 +3,7 @@ import React, {useEffect, useMemo, useRef, useState, type FormEvent} from "react
 import {ThemeToggle} from "../components/layout/ThemeToggle";
 import {Link} from "react-router-dom";
 import {useBodyPageClass} from "../hooks/useBodyPageClass";
+import {API_BASE_URL} from "../config/api";
 
 type SheetState =
     | { status: "loading" }
@@ -60,7 +61,9 @@ export const SprintsPage: React.FC = () => {
 
     // --- загрузка листов ---
     useEffect(() => {
-        fetch("/sprints/api/sheets")
+        fetch(`${API_BASE_URL}/sprints/api/sheets`, {
+            credentials: "include",
+        })
             .then((resp) => {
                 if (!resp.ok) {
                     throw new Error("HTTP " + resp.status);
@@ -184,9 +187,10 @@ export const SprintsPage: React.FC = () => {
 
         setImportState({phase: "loading"});
 
-        fetch("/sprints/api/import", {
+        fetch(`${API_BASE_URL}/sprints/api/import`, {
             method: "POST",
-            body: formData
+            body: formData,
+            credentials: "include",
         })
             .then(async (resp) => {
                 const json = await resp.json();
@@ -204,13 +208,13 @@ export const SprintsPage: React.FC = () => {
                     filename: json.filename ?? file.name,
                     originalSheet: json.originalSheet ?? selectedSheet.trim(),
                     sheet: json.sheet ?? "",
-                    result
+                    result,
                 });
             })
             .catch((err: Error) => {
                 setImportState({
                     phase: "error",
-                    message: err.message || "Ошибка при импорте спринта."
+                    message: err.message || "Ошибка при импорте спринта.",
                 });
             });
     };
@@ -414,12 +418,9 @@ export const SprintsPage: React.FC = () => {
                                 <label>Исходный лист:</label>
                                 <div style={{flex: 1, minWidth: 230}}>
                                     {sheetState.status === "loading" && (
-                                        <div className="field-hint">
-                                            Загружаю список листов…
-                                        </div>
+                                        <div className="field-hint">Загружаю список листов…</div>
                                     )}
-                                    {sheetState.status !== "loading" &&
-                                        renderSourceSheetField()}
+                                    {sheetState.status !== "loading" && renderSourceSheetField()}
                                 </div>
                             </div>
 
@@ -490,7 +491,7 @@ export const SprintsPage: React.FC = () => {
                                 style={{
                                     marginTop: "16px",
                                     display: "inline-flex",
-                                    gap: 4
+                                    gap: 4,
                                 }}
                             >
                                 <span>⟵</span>

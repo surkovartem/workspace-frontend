@@ -3,6 +3,7 @@ import React from "react";
 import {useLocation} from "react-router-dom";
 import {ThemeToggle} from "../components/layout/ThemeToggle";
 import {useBodyPageClass} from "../hooks/useBodyPageClass";
+import {API_BASE_URL} from "../config/api";
 
 export const LoginPage: React.FC = () => {
     useBodyPageClass("login-page");
@@ -33,7 +34,7 @@ export const LoginPage: React.FC = () => {
                     </p>
 
                     <div className="hero-meta">
-                        <div className="pill"><strong>Sprints</strong>&nbsp;· CSV → Sheets</div>
+                        <div className="pill"><strong>Sprints</strong>· CSV → Sheets</div>
                         <div className="pill">· Kanban</div>
                         <div className="pill">· Task Manager</div>
                     </div>
@@ -43,8 +44,12 @@ export const LoginPage: React.FC = () => {
                     <h2 className="card-title">Вход в Workspace</h2>
                     <p className="card-sub">Локальный аккаунт, без лишних интеграций.</p>
 
-                    {/* Обрати внимание: action="/api/login" */}
-                    <form method="post" action="/api/login">
+                    {/*
+                        Важное изменение:
+                        Форму отправляем на `${API_BASE_URL}/api/login`
+                        чтобы Spring Security на бэке получил POST в dev и prod.
+                    */}
+                    <form method="post" action={`${API_BASE_URL}/api/login`}>
                         <div className="field">
                             <label htmlFor="username">Логин</label>
                             <input

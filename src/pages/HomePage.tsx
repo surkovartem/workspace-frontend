@@ -3,13 +3,15 @@ import React from "react";
 import {Link} from "react-router-dom";
 import {ThemeToggle} from "../components/layout/ThemeToggle";
 import {useBodyPageClass} from "../hooks/useBodyPageClass";
+import {API_BASE_URL} from "../config/api";
 
 export const HomePage: React.FC = () => {
     useBodyPageClass("workspace-page");
 
     const handleLogout = () => {
-        // Отдаём управление Spring Security: он сделает logout и редирект на /login?logout
-        window.location.href = "/logout";
+        // Отдаём управление Spring Security на бэкенде:
+        // /logout на бэке очистит сессию и редиректнет на /login?logout фронта
+        window.location.href = `${API_BASE_URL}/logout`;
     };
 
     return (

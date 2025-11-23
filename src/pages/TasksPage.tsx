@@ -4,6 +4,7 @@ import {Link} from "react-router-dom";
 import {ThemeToggle} from "../components/layout/ThemeToggle";
 import type {Task, TaskPriority, TaskStatus} from "../types/task";
 import {useBodyPageClass} from "../hooks/useBodyPageClass";
+import {API_BASE_URL} from "../config/api";
 
 type LoadState =
     | { status: "loading" }
@@ -56,8 +57,8 @@ export const TasksPage: React.FC = () => {
             prev.status === "loading" ? prev : {status: "loading"}
         );
 
-        fetch("/tasks/api/list", {
-            credentials: "include"
+        fetch(`${API_BASE_URL}/tasks/api/list`, {
+            credentials: "include" // ✅ сессия
         })
             .then((resp) => {
                 if (!resp.ok) {
@@ -241,7 +242,7 @@ export const TasksPage: React.FC = () => {
             dueDate: createForm.dueDate || null
         };
 
-        const resp = await fetch("/tasks/api", {
+        const resp = await fetch(`${API_BASE_URL}/tasks/api`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -270,7 +271,7 @@ export const TasksPage: React.FC = () => {
             dueDate: editForm.dueDate || null
         };
 
-        const resp = await fetch(`/tasks/api/${editForm.id}`, {
+        const resp = await fetch(`${API_BASE_URL}/tasks/api/${editForm.id}`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json"
@@ -291,7 +292,7 @@ export const TasksPage: React.FC = () => {
     const handleDeleteConfirm = async () => {
         if (!editForm.id) return;
 
-        const resp = await fetch(`/tasks/api/${editForm.id}`, {
+        const resp = await fetch(`${API_BASE_URL}/tasks/api/${editForm.id}`, {
             method: "DELETE",
             credentials: "include"
         });
@@ -525,10 +526,14 @@ export const TasksPage: React.FC = () => {
                                                 type="button"
                                                 className="task-menu-toggle"
                                                 aria-haspopup="true"
-                                                aria-expanded={menuTaskId === t.id}
+                                                aria-expanded={
+                                                    menuTaskId === t.id
+                                                }
                                                 onClick={() =>
                                                     setMenuTaskId((prev) =>
-                                                        prev === t.id ? null : t.id
+                                                        prev === t.id
+                                                            ? null
+                                                            : t.id
                                                     )
                                                 }
                                             >
@@ -541,14 +546,16 @@ export const TasksPage: React.FC = () => {
                                                         position: "absolute",
                                                         right: 0,
                                                         top: "120%",
-                                                        backgroundColor: "#020617",
+                                                        backgroundColor:
+                                                            "#020617",
                                                         borderRadius: 8,
                                                         padding: "4px 0",
                                                         boxShadow:
                                                             "0 10px 30px rgba(0,0,0,0.5)",
                                                         zIndex: 20,
                                                         display: "flex",
-                                                        flexDirection: "column",
+                                                        flexDirection:
+                                                            "column",
                                                         minWidth: "180px"
                                                     }}
                                                 >
@@ -557,15 +564,20 @@ export const TasksPage: React.FC = () => {
                                                         className="task-menu-item task-menu-edit"
                                                         style={{
                                                             border: "none",
-                                                            background: "transparent",
-                                                            textAlign: "left",
+                                                            background:
+                                                                "transparent",
+                                                            textAlign:
+                                                                "left",
                                                             padding:
                                                                 "6px 12px",
-                                                            cursor: "pointer",
+                                                            cursor:
+                                                                "pointer",
                                                             fontSize: 14
                                                         }}
                                                         onClick={() =>
-                                                            openEditModal(t)
+                                                            openEditModal(
+                                                                t
+                                                            )
                                                         }
                                                     >
                                                         Редактировать
@@ -575,16 +587,21 @@ export const TasksPage: React.FC = () => {
                                                         className="task-menu-item task-menu-delete"
                                                         style={{
                                                             border: "none",
-                                                            background: "transparent",
-                                                            textAlign: "left",
+                                                            background:
+                                                                "transparent",
+                                                            textAlign:
+                                                                "left",
                                                             padding:
                                                                 "6px 12px",
-                                                            cursor: "pointer",
+                                                            cursor:
+                                                                "pointer",
                                                             fontSize: 14,
                                                             color: "#f97373"
                                                         }}
                                                         onClick={() =>
-                                                            openDeleteModal(t)
+                                                            openDeleteModal(
+                                                                t
+                                                            )
                                                         }
                                                     >
                                                         Удалить
@@ -672,7 +689,8 @@ export const TasksPage: React.FC = () => {
                                     onChange={(e) =>
                                         setCreateForm((prev) => ({
                                             ...prev,
-                                            priority: e.target.value as TaskPriority
+                                            priority:
+                                                e.target.value as TaskPriority
                                         }))
                                     }
                                 >
@@ -788,7 +806,8 @@ export const TasksPage: React.FC = () => {
                                     onChange={(e) =>
                                         setEditForm((prev) => ({
                                             ...prev,
-                                            priority: e.target.value as TaskPriority
+                                            priority:
+                                                e.target.value as TaskPriority
                                         }))
                                     }
                                 >
@@ -817,7 +836,8 @@ export const TasksPage: React.FC = () => {
                                     onChange={(e) =>
                                         setEditForm((prev) => ({
                                             ...prev,
-                                            status: e.target.value as TaskStatus
+                                            status:
+                                                e.target.value as TaskStatus
                                         }))
                                     }
                                 >

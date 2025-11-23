@@ -4,30 +4,6 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
     plugins: [react()],
     server: {
-        port: 5173,
-        proxy: {
-            "/sprints": {
-                target: "http://localhost:8080",
-                changeOrigin: true
-            },
-            "/tasks/api": {
-                target: "http://localhost:8080",
-                changeOrigin: true
-            },
-            "/kanban/api": {
-                target: "http://localhost:8080",
-                changeOrigin: true
-            },
-            // ВЕСЬ backend-API (включая /api/login) ходит через /api
-            "/api": {
-                target: "http://localhost:8080",
-                changeOrigin: true
-            },
-            // logout тоже на бэк
-            "/logout": {
-                target: "http://localhost:8080",
-                changeOrigin: true
-            }
-        }
+        port: 5173
     }
 });

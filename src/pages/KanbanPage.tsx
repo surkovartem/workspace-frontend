@@ -4,6 +4,7 @@ import {Link} from "react-router-dom";
 import {ThemeToggle} from "../components/layout/ThemeToggle";
 import type {Task, TaskPriority} from "../types/task";
 import {useBodyPageClass} from "../hooks/useBodyPageClass";
+import {API_BASE_URL} from "../config/api";
 
 type LoadStatus = "loading" | "ok" | "error";
 
@@ -74,7 +75,7 @@ export const KanbanPage: React.FC = () => {
         }
 
         try {
-            const resp = await fetch("/kanban/api/board", {
+            const resp = await fetch(`${API_BASE_URL}/kanban/api/board`, {
                 credentials: "include"
             });
             if (!resp.ok) {
@@ -307,7 +308,7 @@ export const KanbanPage: React.FC = () => {
         const quietReload = async () => {
             try {
                 await fetch(
-                    `/kanban/api/task/${dragTaskId}/move?columnId=${targetColumnId}&index=${finalIndexForBackend}`,
+                    `${API_BASE_URL}/kanban/api/task/${dragTaskId}/move?columnId=${targetColumnId}&index=${finalIndexForBackend}`,
                     {
                         method: "POST",
                         credentials: "include"
@@ -378,7 +379,7 @@ export const KanbanPage: React.FC = () => {
         };
 
         try {
-            const resp = await fetch("/kanban/api/task", {
+            const resp = await fetch(`${API_BASE_URL}/kanban/api/task`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -411,7 +412,7 @@ export const KanbanPage: React.FC = () => {
         };
 
         try {
-            const resp = await fetch(`/kanban/api/task/${editForm.id}`, {
+            const resp = await fetch(`${API_BASE_URL}/kanban/api/task/${editForm.id}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json"
@@ -438,7 +439,7 @@ export const KanbanPage: React.FC = () => {
         if (!ok) return;
 
         try {
-            const resp = await fetch(`/kanban/api/task/${taskId}`, {
+            const resp = await fetch(`${API_BASE_URL}/kanban/api/task/${taskId}`, {
                 method: "DELETE",
                 credentials: "include"
             });

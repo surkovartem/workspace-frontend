@@ -65,7 +65,7 @@ export const NotFoundPage: React.FC = () => {
                         </span>
                         <p className="muted">
                             Если ты ожидал увидеть здесь инструмент — проверь роутинг React
-                            и настройки proxy на бэке.
+                            и соответствующий URL API на бэкенде.
                         </p>
                     </div>
                 </div>
