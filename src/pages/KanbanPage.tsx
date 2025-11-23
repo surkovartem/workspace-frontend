@@ -1,4 +1,3 @@
-// src/pages/KanbanPage.tsx
 import React, {useEffect, useMemo, useState} from "react";
 import {Link} from "react-router-dom";
 import {ThemeToggle} from "../components/layout/ThemeToggle";
@@ -531,8 +530,7 @@ export const KanbanPage: React.FC = () => {
 
                     <button
                         type="button"
-                        className="btn-primary"
-                        style={{width: "auto", paddingInline: 16}}
+                        className="btn-primary kanban-new-task-btn"
                         onClick={() => openCreateModal(null)}
                     >
                         + Новая задача

@@ -1,4 +1,3 @@
-// src/pages/LoginPage.tsx
 import React from "react";
 import {useLocation} from "react-router-dom";
 import {ThemeToggle} from "../components/layout/ThemeToggle";
@@ -44,11 +43,7 @@ export const LoginPage: React.FC = () => {
                     <h2 className="card-title">Вход в Workspace</h2>
                     <p className="card-sub">Локальный аккаунт, без лишних интеграций.</p>
 
-                    {/*
-                        Важное изменение:
-                        Форму отправляем на `${API_BASE_URL}/api/login`
-                        чтобы Spring Security на бэке получил POST в dev и prod.
-                    */}
+                    {/* POST в Spring Security на бэке */}
                     <form method="post" action={`${API_BASE_URL}/api/login`}>
                         <div className="field">
                             <label htmlFor="username">Логин</label>

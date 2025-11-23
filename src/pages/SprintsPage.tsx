@@ -1,4 +1,3 @@
-// src/pages/SprintsPage.tsx
 import React, {useEffect, useMemo, useRef, useState, type FormEvent} from "react";
 import {ThemeToggle} from "../components/layout/ThemeToggle";
 import {Link} from "react-router-dom";
@@ -62,7 +61,7 @@ export const SprintsPage: React.FC = () => {
     // --- загрузка листов ---
     useEffect(() => {
         fetch(`${API_BASE_URL}/sprints/api/sheets`, {
-            credentials: "include",
+            credentials: "include"
         })
             .then((resp) => {
                 if (!resp.ok) {
@@ -190,7 +189,7 @@ export const SprintsPage: React.FC = () => {
         fetch(`${API_BASE_URL}/sprints/api/import`, {
             method: "POST",
             body: formData,
-            credentials: "include",
+            credentials: "include"
         })
             .then(async (resp) => {
                 const json = await resp.json();
@@ -208,13 +207,13 @@ export const SprintsPage: React.FC = () => {
                     filename: json.filename ?? file.name,
                     originalSheet: json.originalSheet ?? selectedSheet.trim(),
                     sheet: json.sheet ?? "",
-                    result,
+                    result
                 });
             })
             .catch((err: Error) => {
                 setImportState({
                     phase: "error",
-                    message: err.message || "Ошибка при импорте спринта.",
+                    message: err.message || "Ошибка при импорте спринта."
                 });
             });
     };
@@ -350,7 +349,7 @@ export const SprintsPage: React.FC = () => {
                                                 {c.type === "UPDATE" &&
                                                     c.diffs &&
                                                     c.diffs.length > 0 && (
-                                                        <div style={{marginTop: 8}}>
+                                                        <div className="changes-table-wrap">
                                                             <table>
                                                                 <thead>
                                                                 <tr>
@@ -491,7 +490,7 @@ export const SprintsPage: React.FC = () => {
                                 style={{
                                     marginTop: "16px",
                                     display: "inline-flex",
-                                    gap: 4,
+                                    gap: 4
                                 }}
                             >
                                 <span>⟵</span>

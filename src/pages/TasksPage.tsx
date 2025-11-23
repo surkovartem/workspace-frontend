@@ -1,15 +1,16 @@
-// src/pages/TasksPage.tsx
-import React, {useEffect, useMemo, useState} from "react";
+import React, {
+    useEffect,
+    useMemo,
+    useRef,
+    useState
+} from "react";
 import {Link} from "react-router-dom";
 import {ThemeToggle} from "../components/layout/ThemeToggle";
 import type {Task, TaskPriority, TaskStatus} from "../types/task";
 import {useBodyPageClass} from "../hooks/useBodyPageClass";
 import {API_BASE_URL} from "../config/api";
 
-type LoadState =
-    | { status: "loading" }
-    | { status: "ok"; tasks: Task[] }
-    | { status: "error" };
+type LoadStatus = "loading" | "ok" | "error";
 
 type SortKey = "status" | "priority" | "title" | "due" | null;
 type SortDir = "asc" | "desc";
@@ -31,10 +32,72 @@ const defaultForm: TaskFormState = {
     dueDate: ""
 };
 
+// ===== ХЕЛПЕР ДЛЯ РЕСАЙЗА КОЛОНОК ТАБЛИЦЫ =====
+
+function initResizableColumns(table: HTMLTableElement | null) {
+    if (!table) return () => {};
+
+    const ths = Array.from(
+        table.querySelectorAll<HTMLTableCellElement>("thead th")
+    );
+
+    const cleanups: Array<() => void> = [];
+
+    ths.forEach((th) => {
+        // чтобы не плодить дубликаты ресайзеров при повторных эффектах
+        if ((th as any)._resizableInitialized) {
+            return;
+        }
+        (th as any)._resizableInitialized = true;
+
+        const resizer = document.createElement("div");
+        resizer.className = "tasks-col-resizer";
+        th.appendChild(resizer);
+
+        let startX = 0;
+        let startWidth = 0;
+
+        const onMouseDown = (e: MouseEvent) => {
+            e.preventDefault();
+            startX = e.pageX;
+            startWidth = th.offsetWidth;
+
+            const onMouseMove = (moveEvent: MouseEvent) => {
+                const delta = moveEvent.pageX - startX;
+                const newWidth = Math.max(startWidth + delta, 60); // минимальная ширина
+                th.style.width = newWidth + "px";
+            };
+
+            const onMouseUp = () => {
+                document.removeEventListener("mousemove", onMouseMove);
+                document.removeEventListener("mouseup", onMouseUp);
+            };
+
+            document.addEventListener("mousemove", onMouseMove);
+            document.addEventListener("mouseup", onMouseUp);
+        };
+
+        resizer.addEventListener("mousedown", onMouseDown);
+        cleanups.push(() => {
+            resizer.removeEventListener("mousedown", onMouseDown);
+        });
+    });
+
+    // cleanup на случай размонтирования
+    return () => {
+        cleanups.forEach((fn) => fn());
+    };
+}
+
 export const TasksPage: React.FC = () => {
     useBodyPageClass("tasks-page");
 
-    const [state, setState] = useState<LoadState>({status: "loading"});
+    const [status, setStatus] = useState<LoadStatus>("loading");
+    const [tasks, setTasks] = useState<Task[]>([]);
+    const [error, setError] = useState<string | null>(null);
+
+    // «Тихая» синхронизация (без моргания таблицы)
+    const [isSyncing, setIsSyncing] = useState(false);
 
     const [statusFilter, setStatusFilter] = useState<string>("");
     const [priorityFilter, setPriorityFilter] = useState<string>("");
@@ -52,44 +115,79 @@ export const TasksPage: React.FC = () => {
     const [createForm, setCreateForm] = useState<TaskFormState>({...defaultForm});
     const [editForm, setEditForm] = useState<TaskFormState>({...defaultForm});
 
-    const loadTasks = () => {
-        setState((prev) =>
-            prev.status === "loading" ? prev : {status: "loading"}
-        );
+    // ref на таблицу — сюда навешиваем ресайзеры
+    const tableRef = useRef<HTMLTableElement | null>(null);
 
-        fetch(`${API_BASE_URL}/tasks/api/list`, {
-            credentials: "include" // ✅ сессия
-        })
-            .then((resp) => {
-                if (!resp.ok) {
-                    throw new Error("HTTP " + resp.status);
-                }
-                return resp.json();
-            })
-            .then((data: any[]) => {
-                const tasks: Task[] = data.map((t) => ({
-                    id: t.id,
-                    title: t.title,
-                    description: t.description ?? null,
-                    priority: t.priority,
-                    status: t.status,
-                    dueDate: t.dueDate ?? null,
-                    completedAt: t.completedAt ?? null
-                }));
-                setState({status: "ok", tasks});
-            })
-            .catch(() => {
-                setState({status: "error"});
+    // ---- загрузка задач ----
+
+    const loadTasks = async (withSpinner: boolean) => {
+        if (withSpinner) {
+            setStatus(prev => (prev === "ok" ? prev : "loading"));
+            setError(null);
+        }
+
+        try {
+            const resp = await fetch(`${API_BASE_URL}/tasks/api/list`, {
+                credentials: "include"
             });
+
+            if (!resp.ok) {
+                throw new Error("HTTP " + resp.status);
+            }
+
+            const data: any[] = await resp.json();
+            const mapped: Task[] = data.map((t) => ({
+                id: t.id,
+                title: t.title,
+                description: t.description ?? null,
+                priority: t.priority,
+                status: t.status,
+                dueDate: t.dueDate ?? null,
+                completedAt: t.completedAt ?? null
+            }));
+
+            setTasks(mapped);
+            setStatus("ok");
+            setError(null);
+        } catch (e) {
+            console.error(e);
+            if (tasks.length === 0) {
+                setStatus("error");
+            }
+            setError("Не удалось загрузить задачи.");
+        }
     };
 
     useEffect(() => {
-        loadTasks();
+        void loadTasks(true);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    const isInitialLoading = status === "loading" && tasks.length === 0;
+
+    // ---- «тихое» обновление после CRUD ----
+
+    const refreshQuietly = async () => {
+        setIsSyncing(true);
+        try {
+            await loadTasks(false);
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
+    // ---- ресайз колонок: инициализация после успешной первой загрузки ----
+
+    useEffect(() => {
+        if (status !== "ok") return;
+        const cleanup = initResizableColumns(tableRef.current);
+        return cleanup;
+    }, [status]);
+
+    // ---- фильтрация + сортировка ----
+
     const filteredAndSorted = useMemo(() => {
-        if (state.status !== "ok") return [];
+        if (status !== "ok") return [];
 
         const parseDate = (str: string | null) => {
             if (!str) return null;
@@ -99,7 +197,7 @@ export const TasksPage: React.FC = () => {
 
         const getThisWeekBounds = () => {
             const today = new Date();
-            const day = today.getDay();
+            const day = today.getDay(); // 0 (вс) – 6 (сб)
             const monday = new Date(today);
             const diff = day === 0 ? -6 : 1 - day;
             monday.setDate(today.getDate() + diff);
@@ -113,7 +211,7 @@ export const TasksPage: React.FC = () => {
         const weekBounds =
             timeFilter === "thisWeek" ? getThisWeekBounds() : null;
 
-        let items = state.tasks.filter((t) => {
+        let items = tasks.filter((t) => {
             if (statusFilter && t.status !== statusFilter) return false;
             if (priorityFilter && t.priority !== priorityFilter) return false;
 
@@ -181,7 +279,7 @@ export const TasksPage: React.FC = () => {
         });
 
         return items;
-    }, [state, statusFilter, priorityFilter, timeFilter, sortKey, sortDir]);
+    }, [tasks, status, statusFilter, priorityFilter, timeFilter, sortKey, sortDir]);
 
     const onSortClick = (key: SortKey) => {
         if (!key) return;
@@ -193,7 +291,7 @@ export const TasksPage: React.FC = () => {
         }
     };
 
-    const isLoading = state.status === "loading";
+    // ---- модалки ----
 
     const openCreateModal = () => {
         setCreateForm({...defaultForm});
@@ -234,6 +332,8 @@ export const TasksPage: React.FC = () => {
         setMenuTaskId(null);
     };
 
+    // ---- CRUD ----
+
     const handleCreateSave = async () => {
         const payload = {
             title: createForm.title.trim(),
@@ -242,22 +342,29 @@ export const TasksPage: React.FC = () => {
             dueDate: createForm.dueDate || null
         };
 
-        const resp = await fetch(`${API_BASE_URL}/tasks/api`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            credentials: "include",
-            body: JSON.stringify(payload)
-        });
+        try {
+            const resp = await fetch(`${API_BASE_URL}/tasks/api`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                credentials: "include",
+                body: JSON.stringify(payload)
+            });
 
-        if (!resp.ok) {
-            alert("Не удалось создать задачу (" + resp.status + ")");
-            return;
+            if (!resp.ok) {
+                const text = await resp.text();
+                console.error("Create task failed", text);
+                alert("Не удалось создать задачу (" + resp.status + ")");
+                return;
+            }
+
+            closeAllModals();
+            await refreshQuietly();
+        } catch (e) {
+            console.error(e);
+            alert("Ошибка при создании задачи");
         }
-
-        closeAllModals();
-        loadTasks();
     };
 
     const handleEditSave = async () => {
@@ -271,40 +378,56 @@ export const TasksPage: React.FC = () => {
             dueDate: editForm.dueDate || null
         };
 
-        const resp = await fetch(`${API_BASE_URL}/tasks/api/${editForm.id}`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            credentials: "include",
-            body: JSON.stringify(payload)
-        });
+        try {
+            const resp = await fetch(`${API_BASE_URL}/tasks/api/${editForm.id}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                credentials: "include",
+                body: JSON.stringify(payload)
+            });
 
-        if (!resp.ok) {
-            alert("Не удалось сохранить задачу (" + resp.status + ")");
-            return;
+            if (!resp.ok) {
+                const text = await resp.text();
+                console.error("Update task failed", text);
+                alert("Не удалось сохранить задачу (" + resp.status + ")");
+                return;
+            }
+
+            closeAllModals();
+            await refreshQuietly();
+        } catch (e) {
+            console.error(e);
+            alert("Ошибка при сохранении задачи");
         }
-
-        closeAllModals();
-        loadTasks();
     };
 
     const handleDeleteConfirm = async () => {
         if (!editForm.id) return;
 
-        const resp = await fetch(`${API_BASE_URL}/tasks/api/${editForm.id}`, {
-            method: "DELETE",
-            credentials: "include"
-        });
+        try {
+            const resp = await fetch(`${API_BASE_URL}/tasks/api/${editForm.id}`, {
+                method: "DELETE",
+                credentials: "include"
+            });
 
-        if (!resp.ok) {
-            alert("Не удалось удалить задачу (" + resp.status + ")");
-            return;
+            if (!resp.ok) {
+                const text = await resp.text();
+                console.error("Delete task failed", text);
+                alert("Не удалось удалить задачу (" + resp.status + ")");
+                return;
+            }
+
+            closeAllModals();
+            await refreshQuietly();
+        } catch (e) {
+            console.error(e);
+            alert("Ошибка при удалении задачи");
         }
-
-        closeAllModals();
-        loadTasks();
     };
+
+    // ---- рендер ----
 
     return (
         <div className="tasks-page">
@@ -319,6 +442,11 @@ export const TasksPage: React.FC = () => {
                     </div>
 
                     <div className="tasks-head-actions">
+                        {isSyncing && (
+                            <span className="muted" style={{fontSize: 12}}>
+                                Сохраняю изменения…
+                            </span>
+                        )}
                         <Link to="/" className="back-link">
                             <span>⟵</span>
                             <span>К рабочему пространству</span>
@@ -428,57 +556,78 @@ export const TasksPage: React.FC = () => {
                         <div className="tasks-toolbar-spacer"/>
                     </div>
 
-                    {state.status === "error" && (
-                        <p className="error">Не удалось загрузить задачи.</p>
+                    {error && (
+                        <p className="error">{error}</p>
                     )}
 
-                    {isLoading && (
+                    {isInitialLoading && (
                         <p className="muted">Загружаю задачи…</p>
                     )}
 
-                    {!isLoading && state.status === "ok" && (
-                        <table className="tasks-table">
-                            <thead>
-                            <tr>
-                                <th className="col-id">ID</th>
-                                <th
-                                    className="col-status"
-                                    data-sort-key="status"
-                                    onClick={() => onSortClick("status")}
-                                >
-                                    Статус
-                                </th>
-                                <th
-                                    className="col-priority"
-                                    data-sort-key="priority"
-                                    onClick={() => onSortClick("priority")}
-                                >
-                                    Приоритет
-                                </th>
-                                <th
-                                    className="col-title"
-                                    data-sort-key="title"
-                                    onClick={() => onSortClick("title")}
-                                >
-                                    Заголовок
-                                </th>
-                                <th className="col-desc">Описание</th>
-                                <th
-                                    className="col-date"
-                                    data-sort-key="due"
-                                    onClick={() => onSortClick("due")}
-                                >
-                                    Срок
-                                </th>
-                                <th className="col-date">Завершено</th>
-                                <th className="col-actions"/>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {filteredAndSorted.map((t) => (
-                                <tr className="task-row" key={t.id}>
-                                    <td className="col-id">{t.id}</td>
-                                    <td>
+                    {!isInitialLoading && status === "ok" && (
+                        <div className="tasks-table-wrap">
+                            <table className="tasks-table" ref={tableRef}>
+                                <thead>
+                                <tr>
+                                    <th className="col-id">ID</th>
+                                    <th
+                                        className={
+                                            "col-status" +
+                                            (sortKey === "status"
+                                                ? ` sort-${sortDir}`
+                                                : "")
+                                        }
+                                        data-sort-key="status"
+                                        onClick={() => onSortClick("status")}
+                                    >
+                                        Статус
+                                    </th>
+                                    <th
+                                        className={
+                                            "col-priority" +
+                                            (sortKey === "priority"
+                                                ? ` sort-${sortDir}`
+                                                : "")
+                                        }
+                                        data-sort-key="priority"
+                                        onClick={() => onSortClick("priority")}
+                                    >
+                                        Приоритет
+                                    </th>
+                                    <th
+                                        className={
+                                            "col-title" +
+                                            (sortKey === "title"
+                                                ? ` sort-${sortDir}`
+                                                : "")
+                                        }
+                                        data-sort-key="title"
+                                        onClick={() => onSortClick("title")}
+                                    >
+                                        Заголовок
+                                    </th>
+                                    <th className="col-desc">Описание</th>
+                                    <th
+                                        className={
+                                            "col-date" +
+                                            (sortKey === "due"
+                                                ? ` sort-${sortDir}`
+                                                : "")
+                                        }
+                                        data-sort-key="due"
+                                        onClick={() => onSortClick("due")}
+                                    >
+                                        Срок
+                                    </th>
+                                    <th className="col-date">Завершено</th>
+                                    <th className="col-actions"/>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {filteredAndSorted.map((t) => (
+                                    <tr className="task-row" key={t.id}>
+                                        <td className="col-id">{t.id}</td>
+                                        <td>
                                             <span
                                                 className={
                                                     "status-badge " +
@@ -494,8 +643,8 @@ export const TasksPage: React.FC = () => {
                                             >
                                                 {t.status}
                                             </span>
-                                    </td>
-                                    <td>
+                                        </td>
+                                        <td>
                                             <span className="priority-pill">
                                                 {t.priority === "P0" &&
                                                     "🔥P0 — срочное реагирование"}
@@ -508,119 +657,63 @@ export const TasksPage: React.FC = () => {
                                                 {t.priority === "P4" &&
                                                     "⚪P4 — не срочно, не важно"}
                                             </span>
-                                    </td>
-                                    <td className="col-title-text">
-                                        {t.title}
-                                    </td>
-                                    <td className="col-desc-text">
-                                        {t.description}
-                                    </td>
-                                    <td>{t.dueDate ?? ""}</td>
-                                    <td>{t.completedAt ?? ""}</td>
-                                    <td className="task-row-actions">
-                                        <div
-                                            className="task-menu"
-                                            style={{position: "relative"}}
-                                        >
-                                            <button
-                                                type="button"
-                                                className="task-menu-toggle"
-                                                aria-haspopup="true"
-                                                aria-expanded={
-                                                    menuTaskId === t.id
-                                                }
-                                                onClick={() =>
-                                                    setMenuTaskId((prev) =>
-                                                        prev === t.id
-                                                            ? null
-                                                            : t.id
-                                                    )
-                                                }
-                                            >
-                                                ⋯
-                                            </button>
-
-                                            {menuTaskId === t.id && (
-                                                <div
-                                                    style={{
-                                                        position: "absolute",
-                                                        right: 0,
-                                                        top: "120%",
-                                                        backgroundColor:
-                                                            "#020617",
-                                                        borderRadius: 8,
-                                                        padding: "4px 0",
-                                                        boxShadow:
-                                                            "0 10px 30px rgba(0,0,0,0.5)",
-                                                        zIndex: 20,
-                                                        display: "flex",
-                                                        flexDirection:
-                                                            "column",
-                                                        minWidth: "180px"
-                                                    }}
+                                        </td>
+                                        <td className="col-title-text">
+                                            {t.title}
+                                        </td>
+                                        <td className="col-desc-text">
+                                            {t.description}
+                                        </td>
+                                        <td>{t.dueDate ?? ""}</td>
+                                        <td>{t.completedAt ?? ""}</td>
+                                        <td className="task-row-actions">
+                                            <div className="task-menu">
+                                                <button
+                                                    type="button"
+                                                    className="task-menu-toggle"
+                                                    aria-haspopup="true"
+                                                    aria-expanded={menuTaskId === t.id}
+                                                    onClick={() =>
+                                                        setMenuTaskId((prev) =>
+                                                            prev === t.id ? null : t.id
+                                                        )
+                                                    }
                                                 >
-                                                    <button
-                                                        type="button"
-                                                        className="task-menu-item task-menu-edit"
-                                                        style={{
-                                                            border: "none",
-                                                            background:
-                                                                "transparent",
-                                                            textAlign:
-                                                                "left",
-                                                            padding:
-                                                                "6px 12px",
-                                                            cursor:
-                                                                "pointer",
-                                                            fontSize: 14
-                                                        }}
-                                                        onClick={() =>
-                                                            openEditModal(
-                                                                t
-                                                            )
-                                                        }
-                                                    >
-                                                        Редактировать
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className="task-menu-item task-menu-delete"
-                                                        style={{
-                                                            border: "none",
-                                                            background:
-                                                                "transparent",
-                                                            textAlign:
-                                                                "left",
-                                                            padding:
-                                                                "6px 12px",
-                                                            cursor:
-                                                                "pointer",
-                                                            fontSize: 14,
-                                                            color: "#f97373"
-                                                        }}
-                                                        onClick={() =>
-                                                            openDeleteModal(
-                                                                t
-                                                            )
-                                                        }
-                                                    >
-                                                        Удалить
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                            {filteredAndSorted.length === 0 && (
-                                <tr>
-                                    <td colSpan={8} className="muted">
-                                        Нет задач под выбранные фильтры.
-                                    </td>
-                                </tr>
-                            )}
-                            </tbody>
-                        </table>
+                                                    ⋯
+                                                </button>
+
+                                                {menuTaskId === t.id && (
+                                                    <div className="task-menu-dropdown">
+                                                        <button
+                                                            type="button"
+                                                            className="task-menu-item task-menu-edit"
+                                                            onClick={() => openEditModal(t)}
+                                                        >
+                                                            Редактировать
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            className="task-menu-item task-menu-delete"
+                                                            onClick={() => openDeleteModal(t)}
+                                                        >
+                                                            Удалить
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {filteredAndSorted.length === 0 && (
+                                    <tr>
+                                        <td colSpan={8} className="muted">
+                                            Нет задач под выбранные фильтры.
+                                        </td>
+                                    </tr>
+                                )}
+                                </tbody>
+                            </table>
+                        </div>
                     )}
 
                     <div className="links tasks-links">
@@ -689,8 +782,7 @@ export const TasksPage: React.FC = () => {
                                     onChange={(e) =>
                                         setCreateForm((prev) => ({
                                             ...prev,
-                                            priority:
-                                                e.target.value as TaskPriority
+                                            priority: e.target.value as TaskPriority
                                         }))
                                     }
                                 >
@@ -806,8 +898,7 @@ export const TasksPage: React.FC = () => {
                                     onChange={(e) =>
                                         setEditForm((prev) => ({
                                             ...prev,
-                                            priority:
-                                                e.target.value as TaskPriority
+                                            priority: e.target.value as TaskPriority
                                         }))
                                     }
                                 >
@@ -836,8 +927,7 @@ export const TasksPage: React.FC = () => {
                                     onChange={(e) =>
                                         setEditForm((prev) => ({
                                             ...prev,
-                                            status:
-                                                e.target.value as TaskStatus
+                                            status: e.target.value as TaskStatus
                                         }))
                                     }
                                 >
