@@ -29,7 +29,7 @@ export const HomePage: React.FC = () => {
                 {/* Ряд сверху: слева спринты, справа заметки */}
                 <div className="workspace-sections-row">
                     {/* Блок 1: планирование спринтов */}
-                    <section className="workspace-section-block">
+                    <section className="workspace-section-block workspace-section-block--sprints">
                         <div className="workspace-section-header">
                             <h2 className="workspace-section-title">Планирование спринтов</h2>
                             <p className="workspace-section-sub">
@@ -40,7 +40,7 @@ export const HomePage: React.FC = () => {
                         <div className="grid">
                             {/* Импорт спринтов */}
                             <section className="card workspace-tool">
-                                <svg className="tool-icon" viewBox="0 0 24 24" fill="var(--accent)">
+                                <svg className="tool-icon" viewBox="0 0 24 24">
                                     <path d="M4 4h16v2H4zm0 6h16v2H4zm0 6h10v2H4z"/>
                                 </svg>
 
@@ -58,7 +58,7 @@ export const HomePage: React.FC = () => {
                     </section>
 
                     {/* Блок 2: работа с заметками (на одном уровне со спринтами) */}
-                    <section className="workspace-section-block">
+                    <section className="workspace-section-block workspace-section-block--notes">
                         <div className="workspace-section-header">
                             <h2 className="workspace-section-title">Работа с заметками</h2>
                             <p className="workspace-section-sub">
@@ -69,7 +69,7 @@ export const HomePage: React.FC = () => {
                         <div className="grid">
                             {/* Заглушка под будущий модуль заметок */}
                             <section className="card workspace-tool tool-disabled">
-                                <svg className="tool-icon" viewBox="0 0 24 24" fill="var(--accent)">
+                                <svg className="tool-icon" viewBox="0 0 24 24">
                                     <path d="M5 4h14v2H5zm0 4h10v2H5zm0 4h14v2H5zm0 4h10v2H5z"/>
                                 </svg>
                                 <h3 className="tool-title">Заметки</h3>
@@ -83,7 +83,7 @@ export const HomePage: React.FC = () => {
                 </div>
 
                 {/* Блок 3: работа с задачами */}
-                <section className="workspace-section-block">
+                <section className="workspace-section-block workspace-section-block--tasks">
                     <div className="workspace-section-header">
                         <h2 className="workspace-section-title">Работа с задачами</h2>
                         <p className="workspace-section-sub">
@@ -94,7 +94,7 @@ export const HomePage: React.FC = () => {
                     <div className="grid">
                         {/* Таск-трекер */}
                         <section className="card workspace-tool">
-                            <svg className="tool-icon" viewBox="0 0 24 24" fill="var(--accent)">
+                            <svg className="tool-icon" viewBox="0 0 24 24">
                                 <path
                                     d="M5 5h3v3H5zM5 11h3v3H5zM5 17h3v3H5zM11 6h8v1.5h-8zM11 12h8v1.5h-8zM11 18h8v1.5h-8z"
                                 />
@@ -109,7 +109,7 @@ export const HomePage: React.FC = () => {
 
                         {/* Канбан */}
                         <section className="card workspace-tool">
-                            <svg className="tool-icon" viewBox="0 0 24 24" fill="var(--accent)">
+                            <svg className="tool-icon" viewBox="0 0 24 24">
                                 <path d="M4 4h6v16H4zm10 0h6v10h-6z"/>
                             </svg>
                             <h3 className="tool-title">Канбан-доска</h3>
@@ -122,7 +122,7 @@ export const HomePage: React.FC = () => {
 
                         {/* Матрица Эйзенхауэра */}
                         <section className="card workspace-tool tool-disabled">
-                            <svg className="tool-icon" viewBox="0 0 24 24" fill="var(--accent)">
+                            <svg className="tool-icon" viewBox="0 0 24 24">
                                 <path d="M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 7v-7h7v7z"/>
                             </svg>
                             <h3 className="tool-title">Матрица Эйзенхауэра</h3>
@@ -135,7 +135,7 @@ export const HomePage: React.FC = () => {
                 </section>
 
                 {/* Блок 4: построение отчётов */}
-                <section className="workspace-section-block">
+                <section className="workspace-section-block workspace-section-block--reports">
                     <div className="workspace-section-header">
                         <h2 className="workspace-section-title">Построение отчётов</h2>
                         <p className="workspace-section-sub">
@@ -146,7 +146,7 @@ export const HomePage: React.FC = () => {
                     <div className="grid">
                         {/* Отчет по продуктовым инцидентам */}
                         <section className="card workspace-tool tool-disabled">
-                            <svg className="tool-icon" viewBox="0 0 24 24" fill="var(--accent)">
+                            <svg className="tool-icon" viewBox="0 0 24 24">
                                 <path d="M5 3h14v2H5zm0 4h10v2H5zm0 4h14v2H5zm0 4h8v2H5z"/>
                             </svg>
                             <h3 className="tool-title">Отчёт по продуктовым инцидентам</h3>
@@ -158,7 +158,7 @@ export const HomePage: React.FC = () => {
 
                         {/* Отчет по релизам */}
                         <section className="card workspace-tool tool-disabled">
-                            <svg className="tool-icon" viewBox="0 0 24 24" fill="var(--accent)">
+                            <svg className="tool-icon" viewBox="0 0 24 24">
                                 <path d="M4 5h16v2H4zm4 4h12v2H8zm-4 4h10v2H4zm6 4h8v2H10z"/>
                             </svg>
                             <h3 className="tool-title">Отчёт по релизам</h3>
@@ -170,7 +170,7 @@ export const HomePage: React.FC = () => {
 
                         {/* Отчет по моей работе */}
                         <section className="card workspace-tool tool-disabled">
-                            <svg className="tool-icon" viewBox="0 0 24 24" fill="var(--accent)">
+                            <svg className="tool-icon" viewBox="0 0 24 24">
                                 <path d="M6 4h12v2H6zm0 4h7v2H6zm0 4h10v2H6zm0 4h8v2H6z"/>
                             </svg>
                             <h3 className="tool-title">Отчёт по моей работе</h3>

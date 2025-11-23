@@ -132,19 +132,24 @@ body.tasks-page {
     color: var(--muted);
     background: var(--card-bg);
     user-select: none;
+    position: relative; /* для стрелки и ресайзера */
 }
 
 /* Сортируемые колонки: курсор + индикатор */
 
 .tasks-table th[data-sort-key] {
     cursor: pointer;
+    padding-right: 18px; /* запас под стрелку справа */
 }
 
 .tasks-table th[data-sort-key]::after {
     content: "↕";
     font-size: 10px;
-    margin-left: 4px;
     opacity: 0.4;
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
 }
 
 .tasks-table th[data-sort-key].sort-asc::after {
@@ -157,14 +162,9 @@ body.tasks-page {
     opacity: 0.9;
 }
 
-/* РЕСАЙЗ КОЛОНОК */
+/* РЕСАЙЗ КОЛОНОК — отдельный ресайзер-элемент, который добавляется JS */
 
-.tasks-table th.resizable {
-    position: relative;
-}
-
-.tasks-table th.resizable::after {
-    content: "";
+.tasks-col-resizer {
     position: absolute;
     top: 0;
     right: 0;
@@ -175,7 +175,7 @@ body.tasks-page {
     transition: opacity 0.15s ease, background-color 0.15s ease;
 }
 
-.tasks-table th.resizable:hover::after {
+.tasks-table th:hover .tasks-col-resizer {
     opacity: 0.4;
     background: var(--accent);
     border-radius: 4px;

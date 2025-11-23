@@ -40,6 +40,9 @@ body.workspace-page {
     background: var(--card-bg);
     box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
     position: relative;
+
+    /* по умолчанию используем общий акцент */
+    --section-accent: var(--accent);
 }
 
 /* Лёгкий акцент по краю, но без цвета по всей площади */
@@ -49,9 +52,29 @@ body.workspace-page {
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    border-top: 3px solid var(--accent);
+    border-top: 3px solid var(--section-accent);
     opacity: 0.6;
     pointer-events: none;
+}
+
+/* Планирование спринтов — зелёный (Excel) */
+.workspace-section-block--sprints {
+    --section-accent: #217346; /* Excel green */
+}
+
+/* Заметки — жёлтый */
+.workspace-section-block--notes {
+    --section-accent: #eab308;
+}
+
+/* Работа с задачами — синий (как общий accent) */
+.workspace-section-block--tasks {
+    --section-accent: var(--accent);
+}
+
+/* Построение отчётов — фиолетовый */
+.workspace-section-block--reports {
+    --section-accent: #a855f7;
 }
 
 /* Заголовок секции */
@@ -113,6 +136,7 @@ body.workspace-page {
     height: 36px;
     margin-bottom: 14px;
     opacity: 0.95;
+    fill: var(--section-accent);
 }
 
 /* Тексты карточек */
@@ -144,7 +168,7 @@ body.workspace-page {
     margin-top: 16px;
     font-size: 14px;
     text-decoration: none;
-    color: var(--accent);
+    color: var(--section-accent);
 }
 
 .workspace-page .tool-link span.arrow {
