@@ -392,6 +392,51 @@ body.dark .task-due-tomorrow {
     color: var(--danger);
 }
 
+.task-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+/* контейнер для кнопок действий */
+.task-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Кнопка архивирования */
+
+.task-archive-button {
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 2px 4px;
+}
+
+.task-archive-button:hover {
+    color: var(--accent);
+}
+
+/* Кнопка удаления уже была, оставляю для контекста */
+
+.task-delete-button {
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 2px 4px;
+}
+
+.task-delete-button:hover {
+    color: var(--danger);
+}
+
+
 /* --------- МОДАЛКИ --------- */
 
 .modal-backdrop {
@@ -520,4 +565,128 @@ body.dark .task-due-tomorrow {
     font-size: 13px;
     color: var(--accent);
     text-decoration: none;
+}
+
+/* --------- КОММЕНТАРИИ НА КАРТОЧКЕ --------- */
+
+.task-comments {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed var(--stroke);
+}
+
+.task-comment-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--muted);
+    max-height: 3.2em; /* лёгкий ограничитель по высоте */
+    overflow: hidden;
+}
+
+.task-comment-bullet {
+    margin-top: 2px;
+    font-size: 10px;
+}
+
+.task-comment-text {
+    flex: 1;
+}
+
+.task-comments-more {
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--muted);
+}
+
+/* --------- КОММЕНТАРИИ В МОДАЛКЕ --------- */
+
+.modal-comments {
+    margin-top: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.modal-comments-title {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.modal-comments-list {
+    max-height: 180px;
+    overflow-y: auto;
+    padding: 6px 8px;
+    border-radius: 10px;
+    border: 1px solid var(--stroke);
+    background: var(--bg-accent);
+}
+
+.modal-comments-empty {
+    font-size: 12px;
+}
+
+.modal-comment-item + .modal-comment-item {
+    margin-top: 6px;
+    border-top: 1px solid rgba(148, 163, 184, 0.35);
+    padding-top: 4px;
+}
+
+.modal-comment-text {
+    font-size: 13px;
+    color: var(--fg);
+    margin-bottom: 2px;
+}
+
+.modal-comment-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--muted);
+}
+
+.modal-comment-delete {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--muted);
+    padding: 0 4px;
+}
+
+.modal-comment-delete:hover {
+    color: var(--danger);
+}
+
+.modal-comments-add {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.modal-comments-add textarea {
+    font-size: 13px;
+    border-radius: 10px;
+    border: 1px solid var(--stroke);
+    background: var(--bg-accent);
+    color: var(--fg);
+    padding: 6px 8px;
+    resize: vertical;
+}
+
+.modal-comments-add textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+    outline: none;
+}
+
+.modal-comments-submit {
+    width: auto;
+    align-self: flex-end;
+    padding-inline: 14px;
+    margin-top: 2px;
 }

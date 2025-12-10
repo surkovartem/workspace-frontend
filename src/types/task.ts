@@ -9,4 +9,5 @@ export interface Task {
     status: TaskStatus;
     dueDate: string | null;
     completedAt: string | null;
+    archived?: boolean;
 }
