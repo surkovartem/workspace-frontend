@@ -88,14 +88,14 @@ export const KanbanPage: React.FC = () => {
         }
 
         try {
-            const entries = await Promise.all(
-                ids.map(async (taskId) => {
+            const entries: [number, TaskComment[]][] = await Promise.all(
+                ids.map(async (taskId): Promise<[number, TaskComment[]]> => {
                     try {
                         const res = await apiGet(`/tasks/api/${taskId}/comments`);
-                        return [taskId, res as TaskComment[]] as const;
+                        return [taskId, res as TaskComment[]];
                     } catch (e) {
                         console.error("Failed to load comments for task", taskId, e);
-                        return [taskId, []] as const;
+                        return [taskId, [] as TaskComment[]];
                     }
                 })
             );
