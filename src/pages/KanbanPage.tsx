@@ -503,6 +503,22 @@ export const KanbanPage: React.FC = () => {
         }
     };
 
+    // ---- Архивирование задачи ----
+
+    const handleArchiveTask = async (taskId: number) => {
+        const ok = window.confirm("Отправить задачу в архив?");
+        if (!ok) return;
+
+        try {
+            // можно через apiPost, чтобы не дублировать fetch
+            await apiPost(`/kanban/api/task/${taskId}/archive`, {});
+            await refreshQuietly();
+        } catch (e) {
+            console.error(e);
+            alert("Не удалось архивировать задачу");
+        }
+    };
+
     // ---- CRUD комментариев ----
 
     const handleAddComment = async () => {
@@ -710,7 +726,7 @@ export const KanbanPage: React.FC = () => {
                                                     data-task-priority={t.priority}
                                                     onClick={() => openEditModal(t, column.id)}
                                                 >
-                                                    {/* Верхняя строка: приоритет + крестик */}
+                                                    {/* Верхняя строка: приоритет + действия */}
                                                     <div className="task-card-top">
                                                         <div className="task-priority-row">
                                                             <span className="task-priority-chip">
@@ -726,17 +742,30 @@ export const KanbanPage: React.FC = () => {
                                                                     "⚪P4 — не срочно, не важно"}
                                                             </span>
                                                         </div>
-                                                        <button
-                                                            type="button"
-                                                            className="task-delete-button"
-                                                            title="Удалить"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                void handleDeleteTask(t.id);
-                                                            }}
-                                                        >
-                                                            ✕
-                                                        </button>
+                                                        <div className="task-actions">
+                                                            <button
+                                                                type="button"
+                                                                className="task-archive-button"
+                                                                title="В архив"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    void handleArchiveTask(t.id);
+                                                                }}
+                                                            >
+                                                                📦
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                className="task-delete-button"
+                                                                title="Удалить"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    void handleDeleteTask(t.id);
+                                                                }}
+                                                            >
+                                                                ✕
+                                                            </button>
+                                                        </div>
                                                     </div>
 
                                                     {/* Заголовок */}

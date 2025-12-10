@@ -392,6 +392,51 @@ body.dark .task-due-tomorrow {
     color: var(--danger);
 }
 
+.task-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+/* контейнер для кнопок действий */
+.task-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Кнопка архивирования */
+
+.task-archive-button {
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 2px 4px;
+}
+
+.task-archive-button:hover {
+    color: var(--accent);
+}
+
+/* Кнопка удаления уже была, оставляю для контекста */
+
+.task-delete-button {
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 2px 4px;
+}
+
+.task-delete-button:hover {
+    color: var(--danger);
+}
+
+
 /* --------- МОДАЛКИ --------- */
 
 .modal-backdrop {
