@@ -3,7 +3,7 @@ import {Link} from "react-router-dom";
 import {ThemeToggle} from "../components/layout/ThemeToggle";
 import type {Task, TaskPriority} from "../types/task";
 import {useBodyPageClass} from "../hooks/useBodyPageClass";
-import {API_BASE_URL} from "../config/api";
+import {API_BASE_URL, apiGet, apiPost} from "../config/api";
 
 type LoadStatus = "loading" | "ok" | "error";
 
@@ -36,6 +36,13 @@ const defaultForm: TaskFormState = {
     dueDate: ""
 };
 
+interface TaskComment {
+    id: number;
+    taskId: number;
+    text: string;
+    createdAt: string;
+}
+
 export const KanbanPage: React.FC = () => {
     useBodyPageClass("kanban-page");
 
@@ -43,17 +50,15 @@ export const KanbanPage: React.FC = () => {
     const [board, setBoard] = useState<BoardDto | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    // «Тихая» синхронизация (без моргания страницы)
     const [isSyncing, setIsSyncing] = useState(false);
 
     // Фильтры
     const [priorityFilter, setPriorityFilter] = useState<string>("");
     const [dateFilter, setDateFilter] = useState<string>("");
 
-    // DnD состояние
+    // DnD
     const [dragTaskId, setDragTaskId] = useState<number | null>(null);
     const [dragSourceColumnId, setDragSourceColumnId] = useState<number | null>(null);
-
     const [hoverColumnId, setHoverColumnId] = useState<number | null>(null);
     const [hoverCardId, setHoverCardId] = useState<number | null>(null);
     const [hoverPosition, setHoverPosition] = useState<"above" | "below" | null>(null);
@@ -64,6 +69,46 @@ export const KanbanPage: React.FC = () => {
 
     const [createForm, setCreateForm] = useState<TaskFormState>({...defaultForm});
     const [editForm, setEditForm] = useState<TaskFormState>({...defaultForm});
+
+    // Комментарии по задачам
+    const [commentsByTaskId, setCommentsByTaskId] = useState<Record<number, TaskComment[]>>({});
+    const [newCommentText, setNewCommentText] = useState("");
+
+    // ---- вспомогательное: загрузка комментариев к задачам доски ----
+
+    const loadCommentsForBoard = async (data: BoardDto) => {
+        const allTasks: Task[] = Object.values(data.tasksByColumnId ?? {})
+            .flat()
+            .filter(Boolean);
+
+        const ids = Array.from(new Set(allTasks.map((t) => t.id)));
+        if (ids.length === 0) {
+            setCommentsByTaskId({});
+            return;
+        }
+
+        try {
+            const entries = await Promise.all(
+                ids.map(async (taskId) => {
+                    try {
+                        const res = await apiGet(`/tasks/api/${taskId}/comments`);
+                        return [taskId, res as TaskComment[]] as const;
+                    } catch (e) {
+                        console.error("Failed to load comments for task", taskId, e);
+                        return [taskId, []] as const;
+                    }
+                })
+            );
+
+            const map: Record<number, TaskComment[]> = {};
+            for (const [taskId, list] of entries) {
+                map[taskId] = list;
+            }
+            setCommentsByTaskId(map);
+        } catch (e) {
+            console.error("Failed to load comments for board", e);
+        }
+    };
 
     // ---- загрузка доски ----
 
@@ -84,6 +129,9 @@ export const KanbanPage: React.FC = () => {
             setBoard(data);
             setStatus("ok");
             setError(null);
+
+            // подтягиваем комментарии ко всем задачам
+            await loadCommentsForBoard(data);
         } catch (e) {
             console.error(e);
             if (!board) {
@@ -117,22 +165,16 @@ export const KanbanPage: React.FC = () => {
             .map((col) => {
                 const key = String(col.id);
                 const tasks = (board.tasksByColumnId[key] ?? []).filter((t) => {
-                    // фильтр по приоритету
                     if (priorityFilter && t.priority !== priorityFilter) {
                         return false;
                     }
 
-                    // фильтр по сроку
                     if (!dateFilter) return true;
 
                     const d = parseDate(t.dueDate);
                     if (!d) return false;
 
-                    const taskDate = new Date(
-                        d.getFullYear(),
-                        d.getMonth(),
-                        d.getDate()
-                    );
+                    const taskDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
                     const today = new Date(
                         now.getFullYear(),
                         now.getMonth(),
@@ -186,7 +228,6 @@ export const KanbanPage: React.FC = () => {
         if (!dragTaskId) return;
         e.preventDefault();
         setHoverColumnId(columnId);
-        // если таска над пустой колонкой — card-hover не будет, но дроп сработает (в конец)
     };
 
     const handleCardDragOver = (
@@ -233,7 +274,6 @@ export const KanbanPage: React.FC = () => {
             return;
         }
 
-        // вычисляем индекс вставки
         let insertIndex = originalTargetList.length;
 
         if (
@@ -253,14 +293,12 @@ export const KanbanPage: React.FC = () => {
             }
         }
 
-        // если двигаем внутри одной колонки и тащим вниз, нужно скорректировать индекс
         if (sourceKey === targetKey && insertIndex > fromIndex) {
             insertIndex -= 1;
         }
 
         const finalIndexForBackend = insertIndex;
 
-        // локальное обновление доски для моментального эффекта
         {
             const newTasksByColumnId: Record<string, Task[]> = {
                 ...board.tasksByColumnId
@@ -345,15 +383,17 @@ export const KanbanPage: React.FC = () => {
             priority: task.priority,
             dueDate: task.dueDate ?? ""
         });
+        setNewCommentText("");
         setIsEditOpen(true);
     };
 
     const closeAllModals = () => {
         setIsCreateOpen(false);
         setIsEditOpen(false);
+        setNewCommentText("");
     };
 
-    // ---- CRUD через REST API ----
+    // ---- загрузка доски тихо ----
 
     const refreshQuietly = async () => {
         setIsSyncing(true);
@@ -363,6 +403,8 @@ export const KanbanPage: React.FC = () => {
             setIsSyncing(false);
         }
     };
+
+    // ---- CRUD задач ----
 
     const handleCreateSave = async () => {
         if (!createForm.columnId) {
@@ -411,14 +453,17 @@ export const KanbanPage: React.FC = () => {
         };
 
         try {
-            const resp = await fetch(`${API_BASE_URL}/kanban/api/task/${editForm.id}`, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                credentials: "include",
-                body: JSON.stringify(payload)
-            });
+            const resp = await fetch(
+                `${API_BASE_URL}/kanban/api/task/${editForm.id}`,
+                {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    credentials: "include",
+                    body: JSON.stringify(payload)
+                }
+            );
             if (!resp.ok) {
                 const text = await resp.text();
                 console.error("Update task failed", text);
@@ -438,10 +483,13 @@ export const KanbanPage: React.FC = () => {
         if (!ok) return;
 
         try {
-            const resp = await fetch(`${API_BASE_URL}/kanban/api/task/${taskId}`, {
-                method: "DELETE",
-                credentials: "include"
-            });
+            const resp = await fetch(
+                `${API_BASE_URL}/kanban/api/task/${taskId}`,
+                {
+                    method: "DELETE",
+                    credentials: "include"
+                }
+            );
             if (!resp.ok) {
                 const text = await resp.text();
                 console.error("Delete task failed", text);
@@ -452,6 +500,62 @@ export const KanbanPage: React.FC = () => {
         } catch (e) {
             console.error(e);
             alert("Ошибка при удалении задачи");
+        }
+    };
+
+    // ---- CRUD комментариев ----
+
+    const handleAddComment = async () => {
+        if (!editForm.id) return;
+
+        const text = newCommentText.trim();
+        if (!text) return;
+
+        try {
+            const res = await apiPost(
+                `/tasks/api/${editForm.id}/comments`,
+                {text}
+            );
+            const created = res as TaskComment;
+
+            setCommentsByTaskId((prev) => {
+                const existing = prev[editForm.id!] ?? [];
+                return {
+                    ...prev,
+                    [editForm.id!]: [...existing, created]
+                };
+            });
+            setNewCommentText("");
+        } catch (e) {
+            console.error(e);
+            alert("Не удалось добавить комментарий");
+        }
+    };
+
+    const handleDeleteComment = async (taskId: number, commentId: number) => {
+        try {
+            const resp = await fetch(
+                `${API_BASE_URL}/tasks/api/${taskId}/comments/${commentId}`,
+                {
+                    method: "DELETE",
+                    credentials: "include"
+                }
+            );
+            if (!resp.ok) {
+                const text = await resp.text();
+                console.error("Delete comment failed", text);
+                alert("Не удалось удалить комментарий (" + resp.status + ")");
+                return;
+            }
+
+            setCommentsByTaskId((prev) => {
+                const copy = {...prev};
+                copy[taskId] = (copy[taskId] ?? []).filter((c) => c.id !== commentId);
+                return copy;
+            });
+        } catch (e) {
+            console.error(e);
+            alert("Ошибка при удалении комментария");
         }
     };
 
@@ -582,6 +686,8 @@ export const KanbanPage: React.FC = () => {
                                                 hoverColumnId === column.id &&
                                                 hoverPosition === "below";
 
+                                            const comments = commentsByTaskId[t.id] ?? [];
+
                                             return (
                                                 <article
                                                     key={t.id}
@@ -640,6 +746,32 @@ export const KanbanPage: React.FC = () => {
                                                     {t.description && (
                                                         <div className="task-body">
                                                             {t.description}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Комментарии под описанием */}
+                                                    {comments.length > 0 && (
+                                                        <div className="task-comments">
+                                                            {comments
+                                                                .slice(-3)
+                                                                .map((c) => (
+                                                                    <div
+                                                                        key={c.id}
+                                                                        className="task-comment-line"
+                                                                    >
+                                                                        <span className="task-comment-bullet">
+                                                                            •
+                                                                        </span>
+                                                                        <span className="task-comment-text">
+                                                                            {c.text}
+                                                                        </span>
+                                                                    </div>
+                                                                ))}
+                                                            {comments.length > 3 && (
+                                                                <div className="task-comments-more">
+                                                                    + ещё {comments.length - 3}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     )}
 
@@ -896,6 +1028,73 @@ export const KanbanPage: React.FC = () => {
                                     }
                                 />
                             </label>
+
+                            {/* Блок комментариев — сразу после даты */}
+                            {editForm.id && (
+                                <div className="modal-comments">
+                                    <div className="modal-comments-title">
+                                        Комментарии
+                                    </div>
+
+                                    <div className="modal-comments-list">
+                                        {(
+                                            commentsByTaskId[editForm.id] ?? []
+                                        ).length === 0 && (
+                                            <div className="modal-comments-empty muted">
+                                                Пока нет комментариев.
+                                            </div>
+                                        )}
+
+                                        {(commentsByTaskId[editForm.id] ?? []).map((c) => (
+                                            <div
+                                                key={c.id}
+                                                className="modal-comment-item"
+                                            >
+                                                <div className="modal-comment-text">
+                                                    {c.text}
+                                                </div>
+                                                <div className="modal-comment-meta">
+                                                    <span className="modal-comment-date">
+                                                        {new Date(c.createdAt)
+                                                            .toLocaleString()}
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        className="modal-comment-delete"
+                                                        title="Удалить комментарий"
+                                                        onClick={() =>
+                                                            handleDeleteComment(
+                                                                editForm.id!,
+                                                                c.id
+                                                            )
+                                                        }
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="modal-comments-add">
+                                        <textarea
+                                            rows={3}
+                                            placeholder="Новый комментарий…"
+                                            value={newCommentText}
+                                            onChange={(e) =>
+                                                setNewCommentText(e.target.value)
+                                            }
+                                        />
+                                        <button
+                                            type="button"
+                                            className="btn-primary modal-comments-submit"
+                                            onClick={handleAddComment}
+                                        >
+                                            Добавить комментарий
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="modal-footer">
                                 <button
